@@ -1,5 +1,10 @@
 # AnimeExtract v1.0.0 — ekstrak asset Unity dari HP, tanpa PC
 
+> ## 🚀 Sudah live!
+> **https://kyokoapp.github.io/animestudio/** — buka di Chrome HP → menu ⋮ → **Add to Home screen / Install app**.
+> Paket app: [Release v1.0.0](https://github.com/KyokoApp/animestudio/releases/tag/v1.0.0) (`AnimeExtract-v1.0.0.zip`).
+> Halaman demo/uji: `test-ui.py` (tanpa token) · `deploy.js` (deploy ulang sekali jalan).
+
 Aplikasi (PWA) untuk mengendalikan **AnimeStudio** yang berjalan di **PC Windows gratis milik GitHub
 Actions**. Semua dari HP: pilih file bundle → kirim → atur → jalankan → unduh hasilnya.
 
