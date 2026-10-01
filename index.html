@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080a14">
+<meta name="description" content="Ekstraktor asset game Unity — jalan di PC Windows gratis milik GitHub, dikendalikan dari HP.">
+<title>AnimeExtract — ekstrak asset Unity dari HP</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <img src="icons/icon-192.png" alt="" class="logo">
+  <div class="brand">
+    <h1>AnimeExtract</h1>
+    <span id="repoLabel">belum disetel</span>
+  </div>
+  <button class="pill" id="statusPill"><span class="dot"></span><span id="statusPillText">cek…</span></button>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════ SETUP ═══════════════════════════ -->
+<section id="view-setup" class="view active">
+  <div class="card">
+    <h2>☝️ Sekali saja — sambungkan ke GitHub</h2>
+    <p class="small muted">
+      App ini <b>tidak menyimpan apa pun di server</b>. Semua data (token, catatan job) disimpan
+      <b>di HP kamu sendiri</b>. Mesin yang bekerja adalah <b>PC Windows gratis milik GitHub</b>.
+    </p>
+
+    <label class="field">
+      <span class="lab">1. Repo ekstraksi (owner/nama)</span>
+      <input type="text" id="setRepo" placeholder="KyokoApp/anime-extract" autocomplete="off" spellcheck="false">
+    </label>
+
+    <label class="field">
+      <span class="lab">2. Token GitHub (personal access token)</span>
+      <div class="row" style="gap:8px">
+        <input type="password" id="setToken" placeholder="github_pat_… atau ghp_…" autocomplete="off" spellcheck="false">
+        <button class="btn ghost" id="btnToggleTok" style="min-width:56px">👁️</button>
+      </div>
+    </label>
+
+    <details class="adv">
+      <summary>Cara bikin token (30 detik, di HP)</summary>
+      <ol class="small" style="padding-left:18px">
+        <li>Buka <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">github.com/settings/personal-access-tokens/new</a></li>
+        <li><b>Repository access</b> → <i>Only select repositories</i> → pilih <code class="kbd">anime-extract</code></li>
+        <li><b>Permissions → Repository</b>: <code class="kbd">Contents: Read and write</code> · <code class="kbd">Actions: Read and write</code></li>
+        <li><b>Expiration</b>: pilih 90 hari (jangan “No expiration”)</li>
+        <li>Klik <b>Generate token</b> → copy → tempel di kolom atas</li>
+      </ol>
+      <p class="tiny muted">Token ini cuma bisa menyentuh repo yang kamu pilih, jadi risikonya kecil.
+        Kalau pernah menempelkan token di tempat lain (chat, catatan), sebaiknya revoke dan bikin baru.</p>
+    </details>
+
+    <div class="row wrap mt">
+      <button class="btn primary" id="btnSaveSetup">Simpan &amp; uji koneksi</button>
+      <button class="btn ghost" id="btnClearSetup">Hapus data</button>
+    </div>
+    <div id="setupResult" class="tiny" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Alurnya cuma 4 langkah</h2>
+    <ol class="small" style="padding-left:18px">
+      <li><b>Kirim</b> — pilih file bundle dari HP → diupload ke Releases repo kamu (maks 2 GB/file)</li>
+      <li><b>Ekstrak</b> — pilih game + jenis asset → tekan tombol → runner Windows GitHub yang kerja</li>
+      <li><b>Proses</b> — pantau progress & log (bisa ditinggal, HP boleh dikunci)</li>
+      <li><b>Hasil</b> — unduh zip hasil langsung dari app (atau dari GitHub)</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ KIRIM ═══════════════════════════ -->
+<section id="view-kirim" class="view">
+  <div class="card">
+    <h2>1️⃣ Kirim bundle ke GitHub</h2>
+    <p class="small muted">File naik ke <b>repo private kamu sendiri</b> (folder <code class="kbd">inbox/</code>) —
+      lewat jalur yang didukung browser HP, jadi tidak perlu PC. Hasil ekstraksinya tetap private.</p>
+
+    <div class="drop" id="drop">
+      <div style="font-size:26px">📦</div>
+      <div class="small">Taruh file di sini atau</div>
+      <button class="btn" id="btnPick" style="margin-top:8px">Pilih file bundle</button>
+      <input type="file" id="fileInput" multiple class="hidden">
+      <div class="tiny muted" style="margin-top:8px">.zip · .7z · .rar · .ab · .bin — yang dipakai ekstraksi = file pertama</div>
+    </div>
+
+    <div class="filelist" id="picked"></div>
+
+    <button class="btn primary wide" id="btnUpload" disabled>⬆️ Kirim ke repo</button>
+    <div class="bar mt hidden" id="upBarWrap"><i id="upBar"></i></div>
+    <div class="tiny muted mt" id="upInfo"></div>
+    <div class="tiny muted mt">Lewat app ini paling aman sampai <b>± 45 MB</b>. File lebih besar? Pakai kartu di bawah — tetap bisa dari HP.</div>
+  </div>
+
+  <div class="card">
+    <h2>File besar (&gt; 45 MB) — lewat Releases</h2>
+    <p class="small muted">Releases menerima sampai <b>2 GB per file</b>, tapi file-nya dilampirkan dari halaman web GitHub (3 ketukan di HP, bukan dari app):</p>
+    <ol class="small" style="padding-left:20px;line-height:1.8;margin:6px 0">
+      <li>Tekan tombol di bawah → halaman release baru terbuka di browser.</li>
+      <li>Attach file bundle → tekan <b>Publish release</b>.</li>
+      <li>Tekan lama nama filenya → <b>Copy link</b> → tempel di kotak “pakai bundle yang sudah ada”.</li>
+    </ol>
+    <button class="btn wide" id="btnNewRelease">🔗 Buka halaman release baru</button>
+    <div class="tiny muted mt" id="newRelInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>Pakai bundle yang sudah ada</h2>
+    <p class="small muted">Kalau bundle-nya sudah ada di repo, di Release, atau di internet — tempel link atau path-nya di sini.
+      Otomatis terisi juga di tab Ekstrak.</p>
+    <div class="row" style="gap:8px">
+      <input type="text" id="manualUrl" placeholder="inbox/bundle.zip  atau  https://…/bundle.zip" autocomplete="off">
+      <button class="btn" id="btnUseManual">Pakai</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Bersihkan inbox repo</h2>
+    <p class="small muted">File di <code class="kbd">inbox/</code> ikut terunduh oleh runner tiap kali ekstraksi (bikin lambat + makan kuota).
+      Hapus kalau sudah tidak dipakai.</p>
+    <div class="filelist" id="inboxList"><div class="tiny muted">Tekan “Muat daftar” untuk melihat isi inbox.</div></div>
+    <button class="btn ghost small" id="btnInboxRefresh">🔄 Muat daftar inbox</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ EKSTRAK ═══════════════════════════ -->
+<section id="view-ekstrak" class="view">
+  <div class="card">
+    <h2>2️⃣ Atur ekstraksi</h2>
+
+    <label class="field">
+      <span class="lab">Bundle yang akan dibongkar</span>
+      <input type="text" id="bundleUrl" placeholder="inbox/bundle.zip — atau link https://…" autocomplete="off">
+    </label>
+    <div class="boxinfo" id="bundleInfo"></div>
+
+    <button class="selector" id="gameSelector">
+      <span>
+        <span class="val" id="gameLabel">Genshin Impact — Live</span>
+        <span class="sub" id="gameSub">GI · HoYoverse</span>
+      </span>
+      <span class="chev">▾</span>
+    </button>
+
+    <div class="grp">Jenis asset</div>
+    <div class="chips" id="typeChips"></div>
+    <div class="row wrap mt">
+      <button class="btn small" id="btnPickTypes">＋ Jenis lain</button>
+      <button class="btn ghost small" id="btnAllTypes">Semua jenis</button>
+    </div>
+    <p class="tiny muted" style="margin-top:8px">Kosong = semua jenis asset (paling lama &amp; paling besar).</p>
+  </div>
+
+  <details class="adv" style="margin-bottom:12px">
+    <summary>⚙️ Pengaturan lanjutan</summary>
+    <div class="grid-2">
+      <label class="field"><span class="lab">Format ekspor</span>
+        <select id="optExport">
+          <option value="Convert">Convert (png/wav/obj siap pakai)</option>
+          <option value="Raw">Raw (file mentah)</option>
+          <option value="Dump">Dump (.dat + json)</option>
+          <option value="JSON">JSON</option>
+        </select>
+      </label>
+      <label class="field"><span class="lab">Struktur folder</span>
+        <select id="optGroup">
+          <option value="ByType">ByType</option>
+          <option value="ByContainer">ByContainer</option>
+          <option value="BySource">BySource</option>
+          <option value="None">None</option>
+        </select>
+      </label>
+      <label class="field"><span class="lab">Versi Unity (opsional)</span>
+        <input type="text" id="optUnity" placeholder="mis. 2020.3.30f1">
+      </label>
+      <label class="field"><span class="lab">Build CLI</span>
+        <select id="optBuild"><option value="net10">.NET 10 (terbaru)</option><option value="net9">.NET 9 (stabil)</option></select>
+      </label>
+      <label class="field"><span class="lab">Asset map</span>
+        <select id="optMap">
+          <option value="None">None</option><option value="CABMap">CABMap</option>
+          <option value="AssetMap">AssetMap</option><option value="Both">Both</option><option value="All">All</option>
+        </select>
+      </label>
+      <label class="field"><span class="lab">Hasil ditaruh di Releases?</span>
+        <select id="optPublish"><option value="yes">Ya (mudah diunduh dari HP)</option><option value="no">Tidak (artifact saja)</option></select>
+      </label>
+    </div>
+    <p class="tiny muted">Catatan token: app ini juga bisa <b>memicu lewat file</b> (<code class="kbd">trigger.json</code>)
+      kalau tombol workflow belum tersedia — otomatis dipilih.</p>
+  </details>
+
+  <button class="btn primary big wide" id="btnRun">🚀 Jalankan ekstraksi</button>
+  <div class="tiny muted mt" id="runInfo" style="text-align:center"></div>
+</section>
+
+<!-- ═══════════════════════════ PROSES ═══════════════════════════ -->
+<section id="view-proses" class="view">
+  <div class="card">
+    <div class="row between">
+      <h2 style="margin:0">3️⃣ Proses</h2>
+      <button class="btn ghost small" id="btnRefreshRuns">↻</button>
+    </div>
+    <div id="runList" class="mt"></div>
+  </div>
+  <div class="card hidden" id="runDetail">
+    <div class="row between">
+      <h2 style="margin:0" id="runDetailTitle">Detail</h2>
+      <button class="btn ghost small" id="btnCloseDetail">✕</button>
+    </div>
+    <div id="runSteps" class="mt"></div>
+    <div class="row wrap mt">
+      <a class="btn small ghost" id="runLink" target="_blank" rel="noreferrer">Buka di GitHub</a>
+      <button class="btn small danger" id="btnCancelRun">Batalkan</button>
+      <button class="btn small" id="btnSeeResults">Lihat hasil</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ HASIL ═══════════════════════════ -->
+<section id="view-hasil" class="view">
+  <div class="card">
+    <h2>4️⃣ Hasil</h2>
+    <div class="row" style="gap:8px">
+      <select id="resultRun" style="flex:1"></select>
+      <button class="btn ghost" id="btnRefreshResults">↻</button>
+    </div>
+    <div id="resultBody" class="mt"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PANDUAN ═══════════════════════════ -->
+<section id="view-panduan" class="view guide">
+  <div class="card">
+    <h2>Kenapa butuh GitHub?</h2>
+    <p class="small">
+      AnimeStudio hanya bisa jalan di <b>Windows</b>, dan HP Android tidak bisa menjalankannya.
+      GitHub menyediakan <b>PC Windows gratis</b> (runner <code class="kbd">windows-latest</code>) — app ini
+      cuma “remote control” yang mengirim perintah ke PC itu dan mengambil hasilnya.
+      Jadi: <b>tanpa PC, tanpa install apa pun, gratis</b> (kuota ±1.000 menit Windows/bulan di plan Free).
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Kirim bundle: 2 jalur</h2>
+    <ul class="small" style="padding-left:18px;line-height:1.8">
+      <li><b>Jalur app (sampai ± 45 MB)</b> — file diunggah ke folder <code class="kbd">inbox/</code> di repo private kamu
+        lewat API GitHub. Ini jalur yang paling gampang dari HP dan sudah diuji di app ini.</li>
+      <li><b>Jalur Releases (sampai 2 GB)</b> — untuk file besar: tombol di tab Kirim membuka halaman release baru,
+        kamu attach file-nya dari browser HP, lalu tempel link-nya di kotak “pakai bundle yang sudah ada”.</li>
+      <li>Setelah ekstraksi selesai, hapus file di <code class="kbd">inbox/</code> (kartu “Bersihkan inbox repo”)
+        supaya tiap run tidak mengunduh file besar lagi — dan kuota repo tetap lega.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Tips hemat &amp; aman</h2>
+    <ul class="small" style="padding-left:18px">
+      <li>Mulai dari bundle kecil + jenis asset <code class="kbd">Texture2D</code> dulu, untuk memastikan kode game-nya benar.</li>
+      <li>Salah pilih game = hasil 0 file atau sampah. Coba entri lain (mis. <code class="kbd">GI</code> vs <code class="kbd">GI_CB3</code>).</li>
+      <li>Hasil &gt; 450 MB otomatis di taruh di Releases (biar tidak kena kuota artifact 500 MB). Hasil &gt; 1,8 GB dipecah otomatis.</li>
+      <li>App ini menyimpan token di HP (<code class="kbd">localStorage</code>). Kalau HP dipakai bersama, tekan <b>Hapus data</b> setelah selesai.</li>
+      <li>Hasil ekstraksi tetap milik publisher game — pakai untuk keperluan sendiri, jangan disebar/dijual.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Tentang</h2>
+    <p class="small" style="margin:0">
+      Mesin ekstraksi: <b>AnimeStudio</b> oleh <a href="https://github.com/Escartem/AnimeStudio" target="_blank" rel="noreferrer">Escartem</a>
+      (MIT) → <b>Studio</b> (Razmoth) → <b>AssetStudio</b> (Perfare).
+      App ini (PWA) &amp; workflow-nya dibuat untuk repo <a href="https://github.com/KyokoApp/anime-extract" target="_blank" rel="noreferrer">KyokoApp/anime-extract</a>.
+    </p>
+    <p class="tiny muted" id="appVersion" style="margin-top:8px"></p>
+  </div>
+</section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-tab="kirim"><span class="ic">📤</span>Kirim</button>
+  <button data-tab="ekstrak" class="on"><span class="ic">🚀</span>Ekstrak</button>
+  <button data-tab="proses"><span class="ic">⏳</span>Proses<span class="badge hidden" id="runBadge"></span></button>
+  <button data-tab="hasil"><span class="ic">🎁</span>Hasil</button>
+  <button data-tab="panduan"><span class="ic">📖</span>Panduan</button>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="toast"></div>
+<button class="btn hidden" id="btnInstall" style="position:fixed;right:12px;bottom:calc(var(--tabbar-h) + 12px);z-index:50">⬇️ Install app</button>
+
+<script src="data/games.js"></script>
+<script src="data/classids.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
