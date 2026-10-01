@@ -1,0 +1,447 @@
+/* dibuat otomatis dari data/games.json — dimuat lewat <script> supaya tidak kena CORS di iframe/preview */
+window.AE_GAMES = [
+ {
+  "name": "Normal",
+  "label": "Unity (game biasa)",
+  "category": "Unity",
+  "note": "Game Unity standar tanpa enkripsi"
+ },
+ {
+  "name": "UnityCN",
+  "label": "Unity CN (mode khusus)",
+  "category": "Unity CN",
+  "note": "Pakai kalau punya key UnityCN sendiri"
+ },
+ {
+  "name": "GI",
+  "label": "Genshin Impact — Live",
+  "category": "HoYoverse",
+  "note": "Termasuk bundle terenkripsi 5.x/6.x"
+ },
+ {
+  "name": "GI_Pack",
+  "label": "Genshin Impact — Pack",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "GI_CB1",
+  "label": "Genshin Impact — CBT 1",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "GI_CB2",
+  "label": "Genshin Impact — CBT 2",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "GI_CB3",
+  "label": "Genshin Impact — CBT 3",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "GI_CB3Pre",
+  "label": "Genshin Impact — CBT 3 Pre",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "BH3",
+  "label": "Honkai Impact 3rd — Live",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "BH3Pre",
+  "label": "Honkai Impact 3rd — Pre",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "BH3PrePre",
+  "label": "Honkai Impact 3rd — Pre Pre",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "SR",
+  "label": "Honkai: Star Rail — Live",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "SR_CB2",
+  "label": "Honkai: Star Rail — CBT 2",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "ZZZ",
+  "label": "Zenless Zone Zero — Live",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "ZZZ_CB1",
+  "label": "Zenless Zone Zero — CBT 1",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "ZZZ_CB2",
+  "label": "Zenless Zone Zero — CBT 2",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "HNA_CB1",
+  "label": "HNA — CBT 1",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "HYG_CB1",
+  "label": "HYG — CBT 1",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "TOT",
+  "label": "Tears of Themis — Live",
+  "category": "HoYoverse",
+  "note": ""
+ },
+ {
+  "name": "Naraka",
+  "label": "Naraka",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "EnsembleStars",
+  "label": "Ensemble Stars",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "OPFP",
+  "label": "OPFP",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "FakeHeader",
+  "label": "Unity — Fake Header",
+  "category": "Unity",
+  "note": "Untuk bundle dengan header yang dimodifikasi"
+ },
+ {
+  "name": "FantasyOfWind",
+  "label": "Fantasy of Wind",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ShiningNikki",
+  "label": "Shining Nikki",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "HelixWaltz2",
+  "label": "Helix Waltz 2",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "NetEase",
+  "label": "NetEase (Unity)",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "AnchorPanic",
+  "label": "Anchor Panic",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "DreamscapeAlbireo",
+  "label": "Dreamscape Albireo",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ImaginaryFest",
+  "label": "Imaginary Fest",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "AliceGearAegis",
+  "label": "Alice Gears Aegis",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ProjectSekai",
+  "label": "Project Sekai",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "CodenameJump",
+  "label": "Codename Jump",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "GirlsFrontline",
+  "label": "Girls Frontline",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "Reverse1999",
+  "label": "Reverse: 1999",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ArknightsEndfield",
+  "label": "Arknights Endfield",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ArknightsEndfieldCB3",
+  "label": "Arknights Endfield CBT3",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ArknightsEndfieldCB2",
+  "label": "Arknights Endfield CBT2",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ArknightsEndfieldCB1",
+  "label": "Arknights Endfield CBT1",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "Arknights",
+  "label": "Arknights",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "JJKPhantomParade",
+  "label": "JJK Phantom Parade",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "MuvLuvDimensions",
+  "label": "Muv-Luv Dimensions",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "PartyAnimals",
+  "label": "Party Animals",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "LoveAndDeepspace",
+  "label": "Love and Deepspace",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "SchoolGirlStrikers",
+  "label": "Schoolgirl Strikers",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "ExAstris",
+  "label": "ExAstris",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "PerpetualNovelty",
+  "label": "Perpetual Novelty",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "RewindingCadence",
+  "label": "Rewinding Cadence",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "AzurPromiliaCBT2",
+  "label": "Azur Promilia CBT2",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "AFKJourney",
+  "label": "AFK Journey",
+  "category": "Lainnya",
+  "note": ""
+ },
+ {
+  "name": "PGR_GLB_KR",
+  "label": "Punishing Gray Raven - Global/Korea",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "PGR_CN_JP_TW",
+  "label": "Punishing Gray Raven - China/Japan/Taiwan",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "PGR_CN_JP_TW_OLD",
+  "label": "Punishing Gray Raven - China/Japan/Taiwan Old Key",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "Archeland_KalpaOfUniverse",
+  "label": "Archeland/Kalpa of Universe",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "Archeland_1114",
+  "label": "Archeland 1.1.14",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "NeuralCloud",
+  "label": "Neural Cloud",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "NeuralCloudCN",
+  "label": "Neural Cloud CN",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "HiganEruthyll",
+  "label": "Higan: Eruthyll",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "WhiteCord",
+  "label": "White Chord",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "Mecharashi",
+  "label": "Mecharashi",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "CastlevaniaMoonNightFantasy",
+  "label": "Castlevania: Moon Night Fantasy",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "HYSXZY",
+  "label": "Huā Yì Shān Xīn Zhī Yuè",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "DoulaContinent",
+  "label": "Doula Continent",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "BlessGlobal",
+  "label": "Bless Global",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "Starside",
+  "label": "Starside",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "ResonanceSoltice",
+  "label": "Resonance Soltice",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "OblivionOverride",
+  "label": "Oblivion Override",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "Dawnlands",
+  "label": "Dawnland",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "BB",
+  "label": "BB",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "DynastyLegends2",
+  "label": "Dynasty Legends 2",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "EvernightCN",
+  "label": "Evernight CN",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "XintianlongBabu",
+  "label": "Xintianlong Babu",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "FrostpunkBeyondTheIce",
+  "label": "Frostpunk: Beyond the Ice",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ },
+ {
+  "name": "CatFantasy",
+  "label": "Cat Fantasy",
+  "category": "Unity CN",
+  "note": "Key bawaan terpasang"
+ }
+];
