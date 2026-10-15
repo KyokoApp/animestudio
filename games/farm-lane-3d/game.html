@@ -2,35 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>Cozy Farm Lane - Top Down Farming Game</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6; color: #5c4327; }
+body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6; color: #5c4327; position: fixed; width: 100%; min-height: 100vh; }
 #game-container { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; position: relative; }
-.header { padding: 12px 16px; background: #fdf6e6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.header { padding: 12px 16px; background: #fdf6e6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; z-index: 100; position: relative; }
 .title h1 { font-size: 1.2rem; font-weight: 600; }
 .stats { display: flex; gap: 16px; font-size: 0.9rem; }
 .stat { display: flex; align-items: center; gap: 6px; }
-.container { position: relative; display: flex; justify-content: center; align-items: center; padding: 20px; }
-.ui-panel { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: none; }
+.container { position: relative; width: 100%; max-width: 600px; aspect-ratio: 4/3; max-height: calc(100vh - 160px); min-height: 300px; margin: 10px auto; display: flex; justify-content: center; align-items: center; }
+.container::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, #7cb86f 0%, #5a8f45 100%); opacity: 0.9; }
+.ui-panel { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: none; z-index: 50; }
 .mobile .ui-panel { display: none; }
-.action-btn { background: #5c4327; color: #fdf6e6; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; pointer-events: auto; transition: transform 0.1s; }
+.action-btn { background: #5c4327; color: #fdf6e6; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; pointer-events: auto; transition: transform 0.1s; font-weight: bold; }
 .action-btn:hover { transform: scale(1.05); }
 .action-btn:active { transform: scale(0.95); }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.toasts { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-.toast { background: rgba(92, 67, 39, 0.95); color: #fdf6e6; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; animation: fadeOut 3s forwards; }
+.toasts { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; z-index: 60; }
+.toast { background: rgba(92, 67, 39, 0.95); color: #fdf6e6; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; animation: fadeOut 3s forwards; white-space: nowrap; }
 @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 .mobile-info { display: none; position: absolute; top: 70px; right: 16px; background: #fff8ec; padding: 10px; border-radius: 8px; font-size: 0.75rem; max-width: 140px; z-index: 10; }
 .mobile .mobile-info { display: block; }
-.dpad { display: none; position: absolute; bottom: 20px; left: 20px; }
+.dpad { display: none; position: absolute; bottom: 20px; left: 20px; z-index: 50; }
 .mobile .dpad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
 .dpad-btn { width: 40px; height: 40px; background: rgba(92, 67, 39, 0.9); color: #fdf6e6; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.mobile .action-buttons { display: none; position: absolute; bottom: 20px; right: 20px; gap: 8px; flex-direction: column; }
+.mobile .action-buttons { display: none; position: absolute; bottom: 20px; right: 20px; gap: 8px; flex-direction: column; z-index: 50; }
 .mobile .action-buttons { display: flex; }
-.plot-details { position: absolute; top: 70px; left: 16px; background: #fff8ec; padding: 12px; border-radius: 8px; font-size: 0.8rem; min-width: 120px; }
-@supports (padding-bottom: env(safe-area-inset-bottom)) { .header, .footer { padding-bottom: env(safe-area-inset-bottom); } }
+.plot-details { position: absolute; top: 70px; left: 16px; background: #fff8ec; padding: 12px; border-radius: 8px; font-size: 0.8rem; min-width: 120px; z-index: 50; }
+#canvas-container { position: absolute; inset: 0; z-index: 1; }
+#warning-message { position: absolute; inset: 0; z-index: 200; display: none; background: #5c4327; color: #fff; text-align: center; padding: 20px; }
+#warning-message.visible { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#warning-message h2 { margin-bottom: 10px; }
+#error-details { margin-top: 10px; font-size: 0.85rem; opacity: 0.8; }
+@media screen and (max-width: 600px) {
+    .container { max-width: 100%; margin: 5px auto; }
+    .header { padding: 8px 12px; }
+    .ui-panel { bottom: 60px; }
+    .toast { font-size: 0.75rem; padding: 8px 16px; }
+}
 </style>
 </head>
 <body>
@@ -43,7 +54,14 @@ body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6
 <div class="stat">⭐ <span id="score">0</span></div>
 </div>
 </div>
-<div class="container" id="container"></div>
+<div class="container" id="container">
+<div id="canvas-container"></div>
+<div id="warning-message" class="visible">
+<h2>⚠️ Loading Farm...</h2>
+<p>Please wait while 3D graphics initialize</p>
+<div id="error-details"></div>
+</div>
+</div>
 <div class="ui-panel">
 <button class="action-btn" id="btn-plant">🌱 Plant</button>
 <button class="action-btn" id="btn-water">💧 Water</button>
@@ -63,6 +81,7 @@ body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6
 <button class="action-btn dpad-btn" data-action="harvest">📦</button>
 </div>
 <div class="plot-details" id="plot-details" style="display:none;"></div>
+<div id="warning-message"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script>
@@ -70,10 +89,652 @@ body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6
 const PALETTE = { paper: '#fdf6e6', ink: '#5c4327', soil: '#8b5a2b', soilWet: '#6b4423', grass: '#7cb86f', leaf: '#5a8f45', gold: '#f4d03f', stem: '#5c4327' };
 const GRID_SIZE = 4, PLOT_WIDTH = 40, PLOT_DEPTH = 40, GAP = 10;
 const GROWTH_TIME = 300, GROWTH_TIME_WET = 150;
-class FarmGame { constructor() { this.coins = 30; this.score = 0; this.selectedPlot = null; this.plots = []; this.cameraPos = { x: 0, z: 0 }; this.raycaster = new THREE.Raycaster(); this.mouse = new THREE.Vector2(); this.particles = []; this.initThree(); this.createFarm(); this.createUI(); this.setupControls(); this.animate(); this.showToast('Welcome! Select a plot to start farming.'); } initThree() { const container = document.getElementById('container'); this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(PALETTE.grass); this.camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000); this.camera.position.set(0, 180, 100); this.camera.lookAt(0, 0, 0); this.renderer = new THREE.WebGLRenderer({ antialias: true }); this.renderer.setSize(container.clientWidth, container.clientHeight); this.renderer.shadowMap.enabled = true; container.appendChild(this.renderer.domElement); const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); this.scene.add(ambientLight); const dirLight = new THREE.DirectionalLight(0xffffff, 0.5); dirLight.position.set(50, 100, 50); dirLight.castShadow = true; this.scene.add(dirLight); window.addEventListener('resize', () => { const w = container.clientWidth; const h = container.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h); }); } createFarm() { const grassGeometry = new THREE.PlaneGeometry(400, 400); const grassMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.grass }); const grass = new THREE.Mesh(grassGeometry, grassMaterial); grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; this.scene.add(grass); const startX = -(GRID_SIZE * (PLOT_WIDTH + GAP)) / 2 + GAP / 2; const startZ = -(GRID_SIZE * (PLOT_DEPTH + GAP)) / 2 + GAP / 2; const sharedFoliageGeo = new THREE.SphereGeometry(6, 8, 8); const sharedPetalGeo = new THREE.SphereGeometry(4, 6, 6); const stemGeo = new THREE.CylinderGeometry(1, 1, 15, 6); const leafGeo = new THREE.SphereGeometry(3, 6, 6); for(let row = 0; row < GRID_SIZE; row++) { for(let col = 0; col < GRID_SIZE; col++) { const x = startX + col * (PLOT_WIDTH + GAP); const z = startZ + row * (PLOT_DEPTH + GAP); const soilGeometry = new THREE.BoxGeometry(PLOT_WIDTH, 3, PLOT_DEPTH); const soilMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.soil }); const plotMesh = new THREE.Mesh(soilGeometry, soilMaterial); plotMesh.position.set(x, 1.5, z); plotMesh.receiveShadow = true; plotMesh.userData = { row, col, type: 'soil', plotIndex: this.plots.length }; this.scene.add(plotMesh); const stateData = { row, col, status: 'empty', progress: 0, watered: false, grownAt: 0 }; const plotObj = { mesh: plotMesh, data: stateData }; this.plots.push(plotObj); const fenceGeometry = new THREE.BoxGeometry(PLOT_WIDTH + 4, 6, 2); const fenceMat = new THREE.MeshStandardMaterial({ color: PALETTE.ink }); const fenceFront = new THREE.Mesh(fenceGeometry, fenceMat); fenceFront.position.set(x, 3, z - PLOT_DEPTH / 2 - 1); fenceFront.userData = { type: 'fence' }; this.scene.add(fenceFront); const fenceBack = fenceFront.clone(); fenceBack.position.z = z + PLOT_DEPTH / 2 + 1; this.scene.add(fenceBack); const fenceLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 6, PLOT_DEPTH), fenceMat); fenceLeft.position.set(x - PLOT_WIDTH / 2 - 1, 3, z); this.scene.add(fenceLeft); const fenceRight = fenceLeft.clone(); fenceRight.position.x = x + PLOT_WIDTH / 2 + 1; this.scene.add(fenceRight); } } const barnGroup = new THREE.Group(); const barnBody = new THREE.Mesh(new THREE.BoxGeometry(50, 30, 40), new THREE.MeshStandardMaterial({ color: 0xc8413c })); barnBody.position.set(0, 15, -100); barnBody.userData = { type: 'decoration' }; barnGroup.add(barnBody); const barnRoof = new THREE.Mesh(new THREE.ConeGeometry(35, 20, 4), new THREE.MeshStandardMaterial({ color: 0x8b0000 })); barnRoof.position.set(0, 35, -100); barnGroup.add(barnRoof); barnGroup.userData = { type: 'decoration' }; this.scene.add(barnGroup); } buildPlant(progress) { if(this.currentPlant) this.scene.remove(this.currentPlant); this.currentPlant = new THREE.Group(); const stemHeight = 10 + progress * 10; const stem = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, stemHeight, 6), new THREE.MeshStandardMaterial({ color: PALETTE.stem })); stem.position.y = stemHeight / 2; stem.castShadow = true; this.currentPlant.add(stem); if(progress > 0.2) { const foliage = new THREE.Mesh(sharedFoliageGeo, new THREE.MeshStandardMaterial({ color: PALETTE.leaf })); foliage.position.y = stemHeight; foliage.scale.setScalar(0.8 + progress * 0.4); foliage.castShadow = true; this.currentPlant.add(foliage); } if(progress > 0.6) { const petals = new THREE.Mesh(sharedPetalGeo, new THREE.MeshStandardMaterial({ color: PALETTE.gold })); petals.position.y = stemHeight + 3; petals.scale.setScalar(0.7 + progress * 0.3); petals.castShadow = true; this.currentPlant.add(petals); const center = new THREE.Mesh(new THREE.SphereGeometry(2.5, 6, 6), new THREE.MeshStandardMaterial({ color: PALETTE.ink })); center.position.y = stemHeight + 2; this.currentPlant.add(center); } this.currentPlant.userData = { targetScale: 1 + progress * 0.5, currentScale: 1 }; return this.currentPlant; } highlightPlot(plot) { if(this.highlightMesh) { this.scene.remove(this.highlightMesh); this.highlightMesh.userData.originalColor = null; } if(!plot || plot.data.status === 'empty') return; this.highlightMesh = plot.mesh; if(!plot.highlightOriginal) plot.highlightOriginal = plot.mesh.material.color.getHex(); const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 0.3 }); plot.mesh.material = highlightMat; } spawnParticles(pos, color, count = 8) { const geom = new THREE.SphereGeometry(2, 4, 4); const mat = new THREE.MeshBasicMaterial({ color }); for(let i = 0; i < count; i++) { const particle = new THREE.Mesh(geom, mat.clone()); particle.position.copy(pos); particle.position.y = 5; const speed = { x: (Math.random() - 0.5) * 2, y: Math.random() * 3 + 1, z: (Math.random() - 0.5) * 2 }; particle.userData = { velocity: speed, life: 1.0 }; this.particles.push(particle); this.scene.add(particle); } } animatePlants() { const time = Date.now() * 0.001; this.plots.forEach((plot, idx) => { const { row, col } = plot.data; const x = -(GRID_SIZE * (PLOT_WIDTH + GAP)) / 2 + GAP / 2 + col * (PLOT_WIDTH + GAP); const z = -(GRID_SIZE * (PLOT_DEPTH + GAP)) / 2 + GAP / 2 + row * (PLOT_DEPTH + GAP); if(plot.data.status !== 'empty') { if(!plot.plantGroup) { plot.plantGroup = this.buildPlant(plot.data.progress); plot.plantGroup.position.set(x, 0, z); this.scene.add(plot.plantGroup); } if(plot.plantGroup.userData.targetScale !== plot.plantGroup.scale.x) { const target = plot.plantGroup.userData.targetScale; plot.plantGroup.scale.x += (target - plot.plantGroup.scale.x) * 0.1; plot.plantGroup.scale.y = plot.plantGroup.scale.x; } if(plot.data.status === 'growing') { plot.plantGroup.children.forEach(child => { child.rotation.y = time + (row * col); if(child.geometry.type === 'SphereGeometry') { child.rotation.z = Math.sin(time * 2 + idx) * 0.1; } }); } } if(plot.highlightOriginal && plot.highlightMesh === plot.mesh) { if(plot.mesh.material.emissiveIntensity !== 0) { plot.mesh.material.emissiveIntensity -= 0.02; if(plot.mesh.material.emissiveIntensity <= 0.1) { plot.mesh.material.color.setHex(plot.highlightOriginal); plot.mesh.material.emissiveIntensity = 0; } } } }); this.particles.forEach((p, i) => { p.position.add(p.userData.velocity); p.userData.velocity.y -= 0.15; p.userData.life -= 0.02; p.scale.multiplyScalar(0.95); if(p.userData.life <= 0) { this.scene.remove(p); this.particles.splice(i, 1); } }); } setupControls() { document.addEventListener('keydown', (e) => { switch(e.key.toLowerCase()) { case 'arrowup': case 'w': if(this.selectedPlot) { const r = this.selectedPlot.data.row - 1; if(r >= 0) this.selectPlot(r, this.selectedPlot.data.col); } break; case 'arrowdown': case 's': if(this.selectedPlot) { const r = this.selectedPlot.data.row + 1; if(r < GRID_SIZE) this.selectPlot(r, this.selectedPlot.data.col); } break; case 'arrowleft': case 'a': if(this.selectedPlot) { const c = this.selectedPlot.data.col - 1; if(c >= 0) this.selectPlot(this.selectedPlot.data.row, c); } break; case 'arrowright': case 'd': if(this.selectedPlot) { const c = this.selectedPlot.data.col + 1; if(c < GRID_SIZE) this.selectPlot(this.selectedPlot.data.row, c); } break; case 'enter': case ' ': case 'q': this.handleAction('plant'); break; case 'w': case '1': this.handleAction('water'); break; case 'e': case '2': this.handleAction('harvest'); break; case 'r': case '3': break; } }); const buttons = document.querySelectorAll('.action-btn'); buttons.forEach(btn => btn.addEventListener('click', (e) => { const action = e.target.dataset.action; if(action) this.handleAction(action); })); document.querySelectorAll('[data-dir]').forEach(btn => btn.addEventListener('click', () => { const dir = btn.dataset.dir; if(this.selectedPlot) { switch(dir) { case 'up': if(this.selectedPlot.data.row > 0) this.selectPlot(this.selectedPlot.data.row - 1, this.selectedPlot.data.col); break; case 'down': if(this.selectedPlot.data.row < GRID_SIZE - 1) this.selectPlot(this.selectedPlot.data.row + 1, this.selectedPlot.data.col); break; case 'left': if(this.selectedPlot.data.col > 0) this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col - 1); break; case 'right': if(this.selectedPlot.data.col < GRID_SIZE - 1) this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col + 1); break; } } })); document.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', (e) => { const action = e.target.dataset.action; if(action) { e.preventDefault(); this.handleAction(action); } })); this.renderer.domElement.addEventListener('click', (e) => { const rect = this.renderer.domElement.getBoundingClientRect(); this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1; this.raycaster.setFromCamera(this.mouse, this.camera); const intersects = this.raycaster.intersectObjects(this.scene.children, true); for(const hit of intersects) { if(hit.object.userData.plotIndex !== undefined) { this.selectPlot(hit.object.userData.row, hit.object.userData.col); return; } else if(hit.object.userData.type === 'soil') { const parentGroup = hit.object.parent; const plotIdx = parentGroup.userData ? parentGroup.userData.plotIndex : undefined; if(plotIdx !== undefined) { this.selectPlot(this.plots[plotIdx].data.row, this.plots[plotIdx].data.col); return; } } } this.selectPlot(null, null); }); } selectPlot(row, col) { let plot = null; if(row !== null && col !== null) plot = this.plots.find(p => p.data.row === row && p.data.col === col); this.selectedPlot = plot; this.highlightPlot(plot); const detailsEl = document.getElementById('plot-details'); detailsEl.style.display = 'block'; if(plot) { const statusText = plot.data.status === 'empty' ? 'Empty' : plot.data.status === 'growing' ? `Growing (${Math.round(plot.data.progress * 100)}%)` : 'Ready to harvest!'; const wetBadge = plot.data.watered ? '<br><span style="color:#5a8f45">💧 Moist</span>' : ''; detailsEl.innerHTML = `<strong>Plot (${row}, ${col})</strong><br>${statusText}${wetBadge}`; document.getElementById('btn-plant').disabled = plot.data.status !== 'empty' || plot.data.watered; document.getElementById('btn-water').disabled = !plot.data.watered || plot.data.status !== 'growing'; document.getElementById('btn-harvest').disabled = plot.data.status !== 'ready'; } else { detailsEl.innerHTML = ''; ['btn-plant', 'btn-water', 'btn-harvest'].forEach(id => document.getElementById(id).disabled = true); } } handleAction(action) { if(!this.selectedPlot) { this.showToast('Select a plot first!'); return; } const plot = this.selectedPlot; if(action === 'plant') { if(plot.data.status === 'empty' && !plot.data.watered) { plot.data.status = 'growing'; plot.data.progress = 0; plot.data.grownAt = Date.now(); this.showPlantationAnimation(plot); this.showToast('Planted! Watch it grow...'); } else if(plot.data.watered) { this.showToast('Dry the soil first!'); } } else if(action === 'water') { if(plot.data.status === 'growing' && !plot.data.watered) { plot.data.watered = true; this.showToast('Watered! Growth accelerated.'); const wetMat = new THREE.MeshStandardMaterial({ color: PALETTE.soilWet }); plot.mesh.material = wetMat; setTimeout(() => { const dryMat = new THREE.MeshStandardMaterial({ color: PALETTE.soil }); plot.mesh.material = dryMat; plot.data.watered = false; }, 10000); } } else if(action === 'harvest') { if(plot.data.status === 'ready') { this.coins += 10; this.score += 100; plot.data.status = 'empty'; plot.data.progress = 0; plot.data.watered = false; if(plot.plantGroup) { this.scene.remove(plot.plantGroup); plot.plantGroup = null; } this.spawnParticles(new THREE.Vector3(plot.mesh.position.x, 5, plot.mesh.position.z), PALETTE.gold, 12); this.showToast('Harvested! +10 coins'); this.updateUI(); } } } showPlantationAnimation(plot) { const tempGeom = new THREE.SphereGeometry(3, 4, 4); const tempMat = new THREE.MeshStandardMaterial({ color: PALETTE.seed }); const tempPlant = new THREE.Mesh(tempGeom, tempMat); tempPlant.position.copy(plot.mesh.position); tempPlant.position.y = 2; this.scene.add(tempPlant); let scale = 1; const animateSeed = () => { scale *= 0.85; tempPlant.scale.setScalar(scale); tempPlant.position.y += 0.5; if(scale > 0.1) requestAnimationFrame(animateSeed); else { this.scene.remove(tempPlant); this.buildPlant(0.1).position.set(tempPlant.position.x, 0, tempPlant.position.z); this.currentPlant = this.buildPlant(0.1); } }; animateSeed(); } showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; document.getElementById('toasts').appendChild(toast); setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 3500); } updateUI() { document.getElementById('coins').textContent = this.coins; document.getElementById('score').textContent = this.score; } animate() { requestAnimationFrame(() => this.animate()); this.updateGrowth(); this.animatePlants(); this.renderer.render(this.scene, this.camera); } updateGrowth() { const now = Date.now(); this.plots.forEach(plot => { if(plot.data.status === 'growing') { const baseSpeed = GROWTH_TIME; const actualSpeed = plot.data.watered ? GROWTH_TIME_WET : GROWTH_TIME; const elapsed = now - plot.data.grownAt; const needed = plot.data.watered ? GROWTH_TIME_WET : GROWTH_TIME; plot.data.progress = Math.min(elapsed / needed, 1); if(plot.data.progress >= 1) { plot.data.status = 'ready'; plot.data.progress = 1; this.showToast('Ready to harvest! 🌻'); } } }); }
+
+class FarmGame {
+    constructor() {
+        this.coins = 30;
+        this.score = 0;
+        this.selectedPlot = null;
+        this.plots = [];
+        this.cameraPos = { x: 0, z: 0 };
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.particles = [];
+        
+        try {
+            console.log('Initializing FarmGame...');
+            this.initThree();
+            this.createFarm();
+            this.setupControls();
+            this.animate();
+            
+            // Hide loading message
+            const warning = document.getElementById('warning-message');
+            if(warning) warning.classList.remove('visible');
+            
+            this.showToast('Welcome! Select a plot to start farming.');
+        } catch(e) {
+            console.error('Failed to initialize:', e);
+            this.showError(e.message);
+        }
+    }
+    
+    showError(message) {
+        const warning = document.getElementById('warning-message');
+        if(warning) {
+            warning.innerHTML = `
+                <h2>⚠️ Graphics Error</h2>
+                <p>${message}</p>
+                <p style="margin-top:10px;font-size:0.8rem;">Try Chrome browser on mobile/desktop</p>
+            `;
+            warning.classList.add('visible');
+        }
+    }
+    
+    initThree() {
+        console.log('Creating 3D scene...');
+        const canvasContainer = document.getElementById('canvas-container');
+        
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(PALETTE.grass);
+        
+        // Camera positioned top-down with slight angle
+        this.camera = new THREE.PerspectiveCamera(
+            60, 
+            canvasContainer.clientWidth / canvasContainer.clientHeight || 4/3,
+            0.1, 
+            1000
+        );
+        this.camera.position.set(0, 180, 100);
+        this.camera.lookAt(0, 0, 0);
+        
+        // WebGL renderer with proper settings
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            preserveDrawingBuffer: true
+        });
+        this.renderer.setSize(canvasContainer.clientWidth || 600, canvasContainer.clientHeight || 450);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        
+        // Clear canvas container and add renderer
+        canvasContainer.innerHTML = '';
+        canvasContainer.appendChild(this.renderer.domElement);
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(50, 100, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 500;
+        dirLight.shadow.camera.left = -200;
+        dirLight.shadow.camera.right = 200;
+        dirLight.shadow.camera.top = 200;
+        dirLight.shadow.camera.bottom = -200;
+        this.scene.add(dirLight);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            const w = canvasContainer.clientWidth || 600;
+            const h = canvasContainer.clientHeight || 450;
+            this.camera.aspect = w / h;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(w, h);
+        });
+        
+        console.log('Three.js initialized successfully');
+    }
+    
+    createFarm() {
+        console.log('Building farm grid...');
+        
+        // Grass base plane
+        const grassGeometry = new THREE.PlaneGeometry(400, 400);
+        const grassMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.grass });
+        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+        grass.rotation.x = -Math.PI / 2;
+        grass.receiveShadow = true;
+        this.scene.add(grass);
+        
+        // Create 4x4 farm plots
+        const startX = -(GRID_SIZE * (PLOT_WIDTH + GAP)) / 2 + GAP / 2;
+        const startZ = -(GRID_SIZE * (PLOT_DEPTH + GAP)) / 2 + GAP / 2;
+        
+        for(let row = 0; row < GRID_SIZE; row++) {
+            for(let col = 0; col < GRID_SIZE; col++) {
+                const x = startX + col * (PLOT_WIDTH + GAP);
+                const z = startZ + row * (PLOT_DEPTH + GAP);
+                
+                // Soil plot box
+                const soilGeometry = new THREE.BoxGeometry(PLOT_WIDTH, 3, PLOT_DEPTH);
+                const soilMaterial = new THREE.MeshStandardMaterial({ color: PALETTE.soil });
+                const plotMesh = new THREE.Mesh(soilGeometry, soilMaterial);
+                plotMesh.position.set(x, 1.5, z);
+                plotMesh.receiveShadow = true;
+                plotMesh.castShadow = true;
+                plotMesh.userData = { row, col, type: 'soil', plotIndex: this.plots.length };
+                this.scene.add(plotMesh);
+                
+                // Plot state data
+                const stateData = { row, col, status: 'empty', progress: 0, watered: false, grownAt: 0 };
+                const plotObj = { mesh: plotMesh, data: stateData };
+                this.plots.push(plotObj);
+                
+                // Fence around each plot
+                const fenceGeometry = new THREE.BoxGeometry(PLOT_WIDTH + 4, 6, 2);
+                const fenceMat = new THREE.MeshStandardMaterial({ color: PALETTE.ink });
+                
+                const fenceFront = new THREE.Mesh(fenceGeometry, fenceMat);
+                fenceFront.position.set(x, 3, z - PLOT_DEPTH / 2 - 1);
+                fenceFront.userData = { type: 'fence' };
+                fenceFront.castShadow = true;
+                this.scene.add(fenceFront);
+                
+                const fenceBack = fenceFront.clone();
+                fenceBack.position.z = z + PLOT_DEPTH / 2 + 1;
+                fenceBack.castShadow = true;
+                this.scene.add(fenceBack);
+                
+                const fenceLeft = new THREE.Mesh(new THREE.BoxGeometry(2, 6, PLOT_DEPTH), fenceMat);
+                fenceLeft.position.set(x - PLOT_WIDTH / 2 - 1, 3, z);
+                fenceLeft.castShadow = true;
+                this.scene.add(fenceLeft);
+                
+                const fenceRight = fenceLeft.clone();
+                fenceRight.position.x = x + PLOT_WIDTH / 2 + 1;
+                fenceRight.castShadow = true;
+                this.scene.add(fenceRight);
+            }
+        }
+        
+        // Add decorative barn
+        const barnGroup = new THREE.Group();
+        const barnBody = new THREE.Mesh(
+            new THREE.BoxGeometry(50, 30, 40),
+            new THREE.MeshStandardMaterial({ color: 0xc8413c })
+        );
+        barnBody.position.set(0, 15, -100);
+        barnBody.castShadow = true;
+        barnBody.receiveShadow = true;
+        barnGroup.add(barnBody);
+        
+        const barnRoof = new THREE.Mesh(
+            new THREE.ConeGeometry(35, 20, 4),
+            new THREE.MeshStandardMaterial({ color: 0x8b0000 })
+        );
+        barnRoof.position.set(0, 35, -100);
+        barnRoof.castShadow = true;
+        barnGroup.add(barnRoof);
+        
+        barnGroup.userData = { type: 'decoration' };
+        this.scene.add(barnGroup);
+        
+        console.log('Farm built with', this.plots.length, 'plots');
+    }
+    
+    buildPlant(progress) {
+        if(this.currentPlant) {
+            this.scene.remove(this.currentPlant);
+        }
+        
+        this.currentPlant = new THREE.Group();
+        
+        // Stem
+        const stemHeight = 10 + progress * 10;
+        const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(1, 1, stemHeight, 6),
+            new THREE.MeshStandardMaterial({ color: PALETTE.stem })
+        );
+        stem.position.y = stemHeight / 2;
+        stem.castShadow = true;
+        this.currentPlant.add(stem);
+        
+        // Foliage (grows over time)
+        if(progress > 0.2) {
+            const foliage = new THREE.Mesh(
+                new THREE.SphereGeometry(6, 8, 8),
+                new THREE.MeshStandardMaterial({ color: PALETTE.leaf })
+            );
+            foliage.position.y = stemHeight;
+            foliage.scale.setScalar(0.8 + progress * 0.4);
+            foliage.castShadow = true;
+            this.currentPlant.add(foliage);
+        }
+        
+        // Gold petals when nearly mature
+        if(progress > 0.6) {
+            const petals = new THREE.Mesh(
+                new THREE.SphereGeometry(4, 6, 6),
+                new THREE.MeshStandardMaterial({ color: PALETTE.gold })
+            );
+            petals.position.y = stemHeight + 3;
+            petals.scale.setScalar(0.7 + progress * 0.3);
+            petals.castShadow = true;
+            this.currentPlant.add(petals);
+            
+            const center = new THREE.Mesh(
+                new THREE.SphereGeometry(2.5, 6, 6),
+                new THREE.MeshStandardMaterial({ color: PALETTE.ink })
+            );
+            center.position.y = stemHeight + 2;
+            this.currentPlant.add(center);
+        }
+        
+        this.currentPlant.userData = { targetScale: 1 + progress * 0.5, currentScale: 1 };
+        return this.currentPlant;
+    }
+    
+    highlightPlot(plot) {
+        if(this.highlightMesh && this.highlightOriginalColor) {
+            this.highlightMesh.material.color.setHex(this.highlightOriginalColor);
+            this.highlightMesh.material.emissiveIntensity = 0;
+        }
+        
+        if(!plot || plot.data.status === 'empty') return;
+        
+        this.highlightMesh = plot.mesh;
+        this.highlightOriginalColor = plot.mesh.material.color.getHex();
+        
+        const highlightMat = new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.3
+        });
+        plot.mesh.material = highlightMat;
+    }
+    
+    spawnParticles(pos, color, count = 8) {
+        const geom = new THREE.SphereGeometry(2, 4, 4);
+        const mat = new THREE.MeshBasicMaterial({ color });
+        
+        for(let i = 0; i < count; i++) {
+            const particle = new THREE.Mesh(geom, mat.clone());
+            particle.position.copy(pos);
+            particle.position.y = 5;
+            
+            const speed = {
+                x: (Math.random() - 0.5) * 2,
+                y: Math.random() * 3 + 1,
+                z: (Math.random() - 0.5) * 2
+            };
+            
+            particle.userData = { velocity: speed, life: 1.0 };
+            this.particles.push(particle);
+            this.scene.add(particle);
+        }
+    }
+    
+    animatePlants(time = Date.now()) {
+        this.plots.forEach((plot, idx) => {
+            const { row, col } = plot.data;
+            const x = -(GRID_SIZE * (PLOT_WIDTH + GAP)) / 2 + GAP / 2 + col * (PLOT_WIDTH + GAP);
+            const z = -(GRID_SIZE * (PLOT_DEPTH + GAP)) / 2 + GAP / 2 + row * (PLOT_DEPTH + GAP);
+            
+            if(plot.data.status !== 'empty') {
+                if(!plot.plantGroup) {
+                    plot.plantGroup = this.buildPlant(plot.data.progress);
+                    plot.plantGroup.position.set(x, 0, z);
+                    this.scene.add(plot.plantGroup);
+                }
+                
+                // Smooth scale transition
+                if(plot.plantGroup.userData.targetScale !== plot.plantGroup.scale.x) {
+                    const target = plot.plantGroup.userData.targetScale;
+                    plot.plantGroup.scale.x += (target - plot.plantGroup.scale.x) * 0.1;
+                    plot.plantGroup.scale.y = plot.plantGroup.scale.x;
+                }
+                
+                // Gentle swaying animation
+                if(plot.data.status === 'growing' && plot.plantGroup) {
+                    const swayTime = time * 0.001;
+                    plot.plantGroup.children.forEach(child => {
+                        if(child.geometry && child.geometry.type === 'SphereGeometry') {
+                            child.rotation.z = Math.sin(swayTime * 2 + idx) * 0.1;
+                        }
+                        child.rotation.y = swayTime + (row * col);
+                    });
+                }
+            }
+            
+            // Restore original material color
+            if(this.highlightMesh && this.highlightMesh === plot.mesh && this.highlightOriginalColor) {
+                if(plot.mesh.material.emissiveIntensity !== 0) {
+                    plot.mesh.material.emissiveIntensity -= 0.02;
+                    if(plot.mesh.material.emissiveIntensity <= 0.1) {
+                        plot.mesh.material.color.setHex(this.highlightOriginalColor);
+                        plot.mesh.material.emissiveIntensity = 0;
+                    }
+                }
+            }
+        });
+        
+        // Update particles
+        this.particles.forEach((p, i) => {
+            p.position.add(p.userData.velocity);
+            p.userData.velocity.y -= 0.15; // gravity
+            p.userData.life -= 0.02;
+            p.scale.multiplyScalar(0.95);
+            
+            if(p.userData.life <= 0) {
+                this.scene.remove(p);
+                this.particles.splice(i, 1);
+            }
+        });
+    }
+    
+    setupControls() {
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case 'arrowup': case 'w':
+                    if(this.selectedPlot && this.selectedPlot.data.row > 0) {
+                        this.selectPlot(this.selectedPlot.data.row - 1, this.selectedPlot.data.col);
+                    }
+                    break;
+                case 'arrowdown': case 's':
+                    if(this.selectedPlot && this.selectedPlot.data.row < GRID_SIZE - 1) {
+                        this.selectPlot(this.selectedPlot.data.row + 1, this.selectedPlot.data.col);
+                    }
+                    break;
+                case 'arrowleft': case 'a':
+                    if(this.selectedPlot && this.selectedPlot.data.col > 0) {
+                        this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col - 1);
+                    }
+                    break;
+                case 'arrowright': case 'd':
+                    if(this.selectedPlot && this.selectedPlot.data.col < GRID_SIZE - 1) {
+                        this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col + 1);
+                    }
+                    break;
+                case 'enter': case ' ': case 'q':
+                    this.handleAction('plant');
+                    break;
+                case 'w': case '1':
+                    this.handleAction('water');
+                    break;
+                case 'e': case '2':
+                    this.handleAction('harvest');
+                    break;
+            }
+        });
+        
+        // Button click handlers
+        document.getElementById('btn-plant').addEventListener('click', () => this.handleAction('plant'));
+        document.getElementById('btn-water').addEventListener('click', () => this.handleAction('water'));
+        document.getElementById('btn-harvest').addEventListener('click', () => this.handleAction('harvest'));
+        
+        // D-pad buttons
+        document.querySelectorAll('[data-dir]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const dir = btn.dataset.dir;
+                if(!this.selectedPlot) return;
+                
+                switch(dir) {
+                    case 'up':
+                        if(this.selectedPlot.data.row > 0) 
+                            this.selectPlot(this.selectedPlot.data.row - 1, this.selectedPlot.data.col);
+                        break;
+                    case 'down':
+                        if(this.selectedPlot.data.row < GRID_SIZE - 1) 
+                            this.selectPlot(this.selectedPlot.data.row + 1, this.selectedPlot.data.col);
+                        break;
+                    case 'left':
+                        if(this.selectedPlot.data.col > 0) 
+                            this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col - 1);
+                        break;
+                    case 'right':
+                        if(this.selectedPlot.data.col < GRID_SIZE - 1) 
+                            this.selectPlot(this.selectedPlot.data.row, this.selectedPlot.data.col + 1);
+                        break;
+                }
+            });
+        });
+        
+        // Action buttons
+        document.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+                if(action) {
+                    e.preventDefault();
+                    this.handleAction(action);
+                }
+            });
+        });
+        
+        // Click on 3D scene to select plot
+        this.renderer.domElement.addEventListener('click', (e) => {
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+            const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+            
+            for(const hit of intersects) {
+                if(hit.object.userData.plotIndex !== undefined) {
+                    this.selectPlot(hit.object.userData.row, hit.object.userData.col);
+                    return;
+                } else if(hit.object.userData.type === 'soil') {
+                    const parent = hit.object.parent;
+                    const plotIdx = parent ? parent.userData?.plotIndex : undefined;
+                    if(plotIdx !== undefined) {
+                        this.selectPlot(this.plots[plotIdx].data.row, this.plots[plotIdx].data.col);
+                        return;
+                    }
+                }
+            }
+            
+            this.selectPlot(null, null);
+        });
+    }
+    
+    selectPlot(row, col) {
+        let plot = null;
+        if(row !== null && col !== null) {
+            plot = this.plots.find(p => p.data.row === row && p.data.col === col);
+        }
+        
+        this.selectedPlot = plot;
+        this.highlightPlot(plot);
+        
+        const detailsEl = document.getElementById('plot-details');
+        detailsEl.style.display = 'block';
+        
+        if(plot) {
+            const statusText = plot.data.status === 'empty' 
+                ? 'Empty' 
+                : plot.data.status === 'growing' 
+                    ? `Growing (${Math.round(plot.data.progress * 100)}%)`
+                    : 'Ready to harvest!';
+            const wetBadge = plot.data.watered ? '<br><span style="color:#5a8f45">💧 Moist</span>' : '';
+            
+            detailsEl.innerHTML = `<strong>Plot (${row}, ${col})</strong><br>${statusText}${wetBadge}`;
+            
+            // Enable/disable buttons based on plot state
+            ['btn-plant', 'btn-water', 'btn-harvest'].forEach(id => {
+                const btn = document.getElementById(id);
+                if(btn) btn.disabled = true;
+            });
+            
+            if(plot.data.status === 'empty' && !plot.data.watered) {
+                document.getElementById('btn-plant').disabled = false;
+            }
+            if(plot.data.status === 'growing' && !plot.data.watered) {
+                document.getElementById('btn-water').disabled = false;
+            }
+            if(plot.data.status === 'ready') {
+                document.getElementById('btn-harvest').disabled = false;
+            }
+        } else {
+            detailsEl.innerHTML = '';
+        }
+    }
+    
+    handleAction(action) {
+        if(!this.selectedPlot) {
+            this.showToast('Select a plot first!');
+            return;
+        }
+        
+        const plot = this.selectedPlot;
+        
+        if(action === 'plant') {
+            if(plot.data.status === 'empty' && !plot.data.watered) {
+                plot.data.status = 'growing';
+                plot.data.progress = 0;
+                plot.data.grownAt = Date.now();
+                this.showPlantationAnimation(plot);
+                this.showToast('Planted! Watch it grow...');
+            } else if(plot.data.watered) {
+                this.showToast('Dry the soil first! 💧');
+            }
+        } else if(action === 'water') {
+            if(plot.data.status === 'growing' && !plot.data.watered) {
+                plot.data.watered = true;
+                this.showToast('Watered! Growth accelerated! ⚡');
+                
+                // Visual feedback - change soil color
+                const wetMat = new THREE.MeshStandardMaterial({ color: PALETTE.soilWet });
+                plot.mesh.material = wetMat;
+                
+                // Auto-dry after 10 seconds
+                setTimeout(() => {
+                    const dryMat = new THREE.MeshStandardMaterial({ color: PALETTE.soil });
+                    plot.mesh.material = dryMat;
+                    plot.data.watered = false;
+                }, 10000);
+            }
+        } else if(action === 'harvest') {
+            if(plot.data.status === 'ready') {
+                this.coins += 10;
+                this.score += 100;
+                plot.data.status = 'empty';
+                plot.data.progress = 0;
+                plot.data.watered = false;
+                
+                // Remove plant
+                if(plot.plantGroup) {
+                    this.scene.remove(plot.plantGroup);
+                    plot.plantGroup = null;
+                }
+                
+                // Spawn harvest particles
+                this.spawnParticles(
+                    new THREE.Vector3(plot.mesh.position.x, 5, plot.mesh.position.z),
+                    PALETTE.gold,
+                    12
+                );
+                
+                this.showToast('Harvested! +10 coins 🎉');
+                this.updateUI();
+            }
+        }
+    }
+    
+    showPlantationAnimation(plot) {
+        const tempGeom = new THREE.SphereGeometry(3, 4, 4);
+        const tempMat = new THREE.MeshStandardMaterial({ color: PALETTE.leaf });
+        const tempPlant = new THREE.Mesh(tempGeom, tempMat);
+        
+        tempPlant.position.copy(plot.mesh.position);
+        tempPlant.position.y = 2;
+        this.scene.add(tempPlant);
+        
+        let scale = 1;
+        const animateSeed = () => {
+            scale *= 0.85;
+            tempPlant.scale.setScalar(scale);
+            tempPlant.position.y += 0.5;
+            
+            if(scale > 0.1) {
+                requestAnimationFrame(animateSeed);
+            } else {
+                this.scene.remove(tempPlant);
+                const plantGroup = this.buildPlant(0.1);
+                plantGroup.position.set(tempPlant.position.x, 0, tempPlant.position.z);
+                this.scene.add(plantGroup);
+            }
+        };
+        animateSeed();
+    }
+    
+    showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.getElementById('toasts').appendChild(toast);
+        
+        setTimeout(() => {
+            if(toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 3500);
+    }
+    
+    updateUI() {
+        document.getElementById('coins').textContent = this.coins;
+        document.getElementById('score').textContent = this.score;
+    }
+    
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        this.updateGrowth();
+        this.animatePlants(Date.now());
+        
+        if(this.renderer && this.scene && this.camera) {
+            try {
+                this.renderer.render(this.scene, this.camera);
+            } catch(e) {
+                console.warn('Render error:', e);
+            }
+        }
+    }
+    
+    updateGrowth() {
+        const now = Date.now();
+        
+        this.plots.forEach(plot => {
+            if(plot.data.status === 'growing') {
+                const growthTime = plot.data.watered ? GROWTH_TIME_WET : GROWTH_TIME;
+                const elapsed = now - plot.data.grownAt;
+                const needed = growthTime; // in milliseconds
+                
+                plot.data.progress = Math.min(elapsed / needed, 1);
+                
+                if(plot.data.progress >= 1) {
+                    plot.data.status = 'ready';
+                    plot.data.progress = 1;
+                    this.showToast('Ready to harvest! 🌻');
+                }
+            }
+        });
+    }
 }
-window.addEventListener('load', () => { new FarmGame(); });
-if(typeof window !== 'undefined') window.addEventListener('error', (e) => { console.error('Three.js error:', e.message); });
+
+// Initialize game when page loads
+window.addEventListener('load', () => {
+    console.log('Page loaded, initializing game...');
+    try {
+        new FarmGame();
+    } catch(e) {
+        console.error('Fatal error:', e);
+        const container = document.getElementById('container');
+        if(container) {
+            container.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;background:#5c4327;padding:20px;border-radius:8px;width:80%;z-index:100;"><h2>Error Starting Game</h2><p>' + e.message + '</p><p style="margin-top:10px;">Please try:</p><ul style="text-align:left;margin-top:10px;"><li>Use Chrome/Firefox browser</li><li>Enable JavaScript</li><li>Update your browser</li></ul></div>';
+        }
+    }
+});
+
+// Error handler
+if(typeof window !== 'undefined') {
+    window.addEventListener('error', (e) => {
+        console.error('Global error:', e.message);
+    });
+}
 </script>
 </body>
 </html>
