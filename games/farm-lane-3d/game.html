@@ -2,45 +2,317 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Cozy Farm Lane - Top Down Farming Game</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6; color: #5c4327; position: fixed; width: 100%; min-height: 100vh; }
-#game-container { width: 100vw; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; position: relative; }
-.header { padding: 12px 16px; background: #fdf6e6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; z-index: 100; position: relative; }
-.title h1 { font-size: 1.2rem; font-weight: 600; }
-.stats { display: flex; gap: 16px; font-size: 0.9rem; }
-.stat { display: flex; align-items: center; gap: 6px; }
-.container { position: relative; width: 100%; max-width: 600px; aspect-ratio: 4/3; max-height: calc(100vh - 160px); min-height: 300px; margin: 10px auto; display: flex; justify-content: center; align-items: center; }
-.container::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, #7cb86f 0%, #5a8f45 100%); opacity: 0.9; }
-.ui-panel { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: none; z-index: 50; }
+/* ===== Full-screen mobile-first layout ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+html {
+    -webkit-text-size-adjust: 100%;
+}
+body {
+    font-family: system-ui, sans-serif;
+    background: #fdf6e6;
+    color: #5c4327;
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== Game container: fills full screen ===== */
+#game-container {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    height: 100svh;
+    display: grid;
+    grid-template-rows: var(--header-h, 48px) 1fr var(--footer-h, 60px);
+    grid-template-areas:
+        "header"
+        "canvas"
+        "footer";
+}
+
+/* ===== Header ===== */
+.header {
+    grid-area: header;
+    padding: calc(6px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) 6px calc(12px + env(safe-area-inset-left, 0px));
+    background: #fdf6e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    z-index: 100;
+    position: relative;
+    min-height: var(--header-h, 48px);
+    box-sizing: border-box;
+}
+.title h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.stats {
+    display: flex;
+    gap: 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ===== Canvas container: fills remaining space ===== */
+.container {
+    grid-area: canvas;
+    position: relative;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+.container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #7cb86f 0%, #5a8f45 100%);
+    opacity: 0.9;
+}
+
+/* ===== Action buttons (desktop panel) ===== */
+.ui-panel {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 50;
+}
 .mobile .ui-panel { display: none; }
-.action-btn { background: #5c4327; color: #fdf6e6; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; pointer-events: auto; transition: transform 0.1s; font-weight: bold; }
+.action-btn {
+    background: #5c4327;
+    color: #fdf6e6;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 0.1s;
+    font-weight: bold;
+    touch-action: manipulation;
+}
 .action-btn:hover { transform: scale(1.05); }
 .action-btn:active { transform: scale(0.95); }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.toasts { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; z-index: 60; }
-.toast { background: rgba(92, 67, 39, 0.95); color: #fdf6e6; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; animation: fadeOut 3s forwards; white-space: nowrap; }
-@keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-.mobile-info { display: none; position: absolute; top: 70px; right: 16px; background: #fff8ec; padding: 10px; border-radius: 8px; font-size: 0.75rem; max-width: 140px; z-index: 10; }
+
+/* ===== Toasts ===== */
+.toasts {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    pointer-events: none;
+    z-index: 60;
+}
+.toast {
+    background: rgba(92, 67, 39, 0.95);
+    color: #fdf6e6;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    animation: fadeOut 3s forwards;
+    white-space: nowrap;
+}
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+}
+
+/* ===== Mobile info / plot details ===== */
+.mobile-info {
+    display: none;
+    position: absolute;
+    top: 55px;
+    right: 10px;
+    background: #fff8ec;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    max-width: 130px;
+    z-index: 10;
+}
 .mobile .mobile-info { display: block; }
-.dpad { display: none; position: absolute; bottom: 20px; left: 20px; z-index: 50; }
-.mobile .dpad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
-.dpad-btn { width: 40px; height: 40px; background: rgba(92, 67, 39, 0.9); color: #fdf6e6; border: none; border-radius: 8px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.mobile .action-buttons { display: none; position: absolute; bottom: 20px; right: 20px; gap: 8px; flex-direction: column; z-index: 50; }
-.mobile .action-buttons { display: flex; }
-.plot-details { position: absolute; top: 70px; left: 16px; background: #fff8ec; padding: 12px; border-radius: 8px; font-size: 0.8rem; min-width: 120px; z-index: 50; }
-#canvas-container { position: absolute; inset: 0; z-index: 1; }
-#warning-message { position: absolute; inset: 0; z-index: 200; display: none; background: #5c4327; color: #fff; text-align: center; padding: 20px; }
-#warning-message.visible { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.plot-details {
+    position: absolute;
+    top: 55px;
+    left: 10px;
+    background: #fff8ec;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    min-width: 110px;
+    z-index: 50;
+}
+
+/* ===== D-pad and action buttons (mobile) ===== */
+.dpad {
+    display: none;
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    z-index: 50;
+}
+.mobile .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 35px);
+    grid-template-rows: repeat(2, 35px);
+    gap: 4px;
+}
+.dpad-btn {
+    width: 35px;
+    height: 35px;
+    background: rgba(92, 67, 39, 0.9);
+    color: #fdf6e6;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.mobile .action-buttons {
+    display: flex;
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    gap: 6px;
+    flex-direction: column;
+    z-index: 50;
+}
+.mobile .action-buttons .dpad-btn {
+    width: 44px;
+    height: 44px;
+}
+
+/* ===== Canvas and warning overlays ===== */
+#canvas-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+#warning-message {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    background: #5c4327;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+#warning-message.visible {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
 #warning-message h2 { margin-bottom: 10px; }
 #error-details { margin-top: 10px; font-size: 0.85rem; opacity: 0.8; }
-@media screen and (max-width: 600px) {
-    .container { max-width: 100%; margin: 5px auto; }
-    .header { padding: 8px 12px; }
-    .ui-panel { bottom: 60px; }
-    .toast { font-size: 0.75rem; padding: 8px 16px; }
+
+/* ===== Footer placeholder: reserved 60px band under canvas ===== */
+.footer {
+    grid-area: footer;
+    min-height: var(--footer-h, 60px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== Mobile compact sizing ===== */
+@media (max-width: 768px), (pointer: coarse) {
+    :root {
+        --header-h: 42px;
+        --footer-h: 55px;
+    }
+    .header {
+        padding: calc(4px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 4px calc(10px + env(safe-area-inset-left, 0px));
+        min-height: 42px;
+    }
+    .title h1 { font-size: 0.95rem; }
+    .stats { gap: 8px; font-size: 0.75rem; }
+    .dpad { bottom: 10px; left: 10px; }
+    .mobile .dpad {
+        grid-template-columns: repeat(3, 35px);
+        grid-template-rows: repeat(2, 35px);
+    }
+    .mobile .action-buttons { bottom: 10px; right: 10px; gap: 5px; }
+    .mobile .action-buttons .dpad-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.95rem;
+    }
+    .mobile-info { top: 47px; right: 8px; font-size: 0.65rem; }
+    .plot-details { top: 47px; left: 8px; font-size: 0.7rem; padding: 6px; }
+}
+
+/* ===== Landscape mode: keep UI inside wide viewport ===== */
+@media (orientation: landscape) and (max-height: 500px) {
+    :root {
+        --header-h: 38px;
+        --footer-h: 46px;
+    }
+    .header {
+        padding: calc(3px + env(safe-area-inset-top, 0px)) calc(10px + env(safe-area-inset-right, 0px)) 3px calc(10px + env(safe-area-inset-left, 0px));
+        min-height: 38px;
+    }
+    .title h1 { font-size: 0.85rem; }
+    .stats { gap: 6px; font-size: 0.7rem; }
+    .toasts { top: 42px; }
+    .mobile-info { top: 40px; right: 8px; max-width: 180px; }
+    .plot-details { top: 40px; left: 8px; }
+    .dpad { bottom: 8px; left: 8px; }
+    .mobile .action-buttons { bottom: 8px; right: 8px; }
+}
+
+/* ===== Desktop large screens: restore comfortable sizing ===== */
+@media (min-width: 1200px) and (min-height: 700px) {
+    :root {
+        --header-h: 56px;
+        --footer-h: 64px;
+    }
+    .header { padding: calc(10px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) 10px calc(20px + env(safe-area-inset-left, 0px)); }
+    .title h1 { font-size: 1.3rem; }
+    .stats { gap: 16px; font-size: 1rem; }
 }
 </style>
 </head>
@@ -81,7 +353,7 @@ body { font-family: system-ui, sans-serif; overflow: hidden; background: #fdf6e6
 <button class="action-btn dpad-btn" data-action="harvest">📦</button>
 </div>
 <div class="plot-details" id="plot-details" style="display:none;"></div>
-<div id="warning-message"></div>
+<div class="footer"></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script>
@@ -717,6 +989,10 @@ class FarmGame {
 
 // Initialize game when page loads
 window.addEventListener('load', () => {
+    // Enable mobile layout (dpad + action buttons) on touch devices
+    const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || matchMedia('(pointer: coarse)').matches;
+    if(isMobile) document.getElementById('game-container').classList.add('mobile');
+
     console.log('Page loaded, initializing game...');
     try {
         new FarmGame();
