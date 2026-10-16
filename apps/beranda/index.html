@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FFD60A">
+  <title>JADIBOT PIKACHU MD — Bot WhatsApp 24 Jam</title>
+  <meta name="description" content="Jadikan nomor WhatsApp Anda bot Pikachu MD secara instan via pairing code. Aman, cepat, dan aktif 24 jam.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-surface: #0f172a;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --primary: #ffd60a;
+      --primary-hover: #e0bb00;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-pill: 9999px;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+      --max-w: 1100px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input {
+      font-family: inherit;
+    }
+
+    /* Wrap Container */
+    .wrap {
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Navigation */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+    }
+
+    .nav .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.125rem;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      color: #000;
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-pill);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      min-height: 44px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(255, 214, 10, 0.1);
+      border: 1px solid rgba(255, 214, 10, 0.2);
+      border-radius: var(--radius-pill);
+      color: var(--primary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 span {
+      color: var(--primary);
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 36px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* Stats Grid */
+    .stats-section {
+      padding: 20px 0 60px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Features Section */
+    .features-section {
+      padding: 60px 0;
+    }
+
+    .section-title {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-title h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .section-title p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 214, 10, 0.3);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 214, 10, 0.1);
+      color: var(--primary);
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+    }
+
+    .feature-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* CTA Box Section */
+    .cta-section {
+      padding: 60px 0 80px;
+    }
+
+    .cta-box {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 48px 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-box h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .cta-box p {
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto 28px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-main);
+    }
+
+    /* Burger Menu Mobile */
+    .burger {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border);
+        flex-direction: column;
+        padding: 20px;
+        gap: 16px;
+      }
+
+      .nav-links.open {
+        display: flex;
+      }
+
+      .burger {
+        display: block;
+      }
+
+      .hero {
+        padding: 40px 0;
+      }
+
+      .cta-box {
+        padding: 32px 20px;
+      }
+
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header / Navigation -->
+  <header class="nav">
+    <div class="wrap">
+      <a href="#" class="brand">
+        <div class="brand-icon">P</div>
+        <span data-site-name>PIKACHU MD</span>
+      </a>
+
+      <button class="burger" id="burger" aria-label="Toggle menu">☰</button>
+
+      <ul class="nav-links" id="navlinks">
+        <li><a href="#fitur">Fitur Utama</a></li>
+        <li><a href="#statistik">Statistik</a></li>
+        <li><a href="#mulai">Cara Pakai</a></li>
+        <li><a href="#" data-telegram target="_blank" rel="noopener">Telegram</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="btn btn-primary" onclick="handleLogin()">Masuk / Daftar</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-badge">
+          <span>⚡</span>
+          <span>Jadibot WA Otomatis & Praktis</span>
+        </div>
+        <h1>Hubungkan Nomor WhatsApp Jadi Bot <span>Pikachu MD</span></h1>
+        <p>Gunakan fitur pairing code tanpa scan QR. Aktif 24 jam nonstop dengan performa tinggi, aman, dan mudah dikelola langsung dari web.</p>
+        <div class="hero-buttons">
+          <button class="btn btn-primary" onclick="handleLogin()">Mulai Sekarang</button>
+          <a href="#fitur" class="btn btn-secondary">Pelajari Fitur</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section" id="statistik">
+      <div class="wrap">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" data-stat-online>0</div>
+            <div class="stat-label">Bot Aktif Hari Ini</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" data-stat-users>0</div>
+            <div class="stat-label">Pengguna Terdaftar</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">99.9%</div>
+            <div class="stat-label">Uptime Server</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="fitur">
+      <div class="wrap">
+        <div class="section-title">
+          <h2>Keunggulan Platform</h2>
+          <p>Dirancang untuk kemudahan dan kenyamanan pengguna bot WhatsApp.</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            </div>
+            <h3>Pairing Code Instan</h3>
+            <p>Sambungkan bot menggunakan kode pairing 8 digit. Tidak perlu ribet scan QR code dengan kamera HP lain.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h3>Performa Tinggi 24/7</h3>
+            <p>Bot berjalan di server cloud terisolasi yang stabil dan cepat dalam merespon perintah pesan.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h3>Aman & Terprivasi</h3>
+            <p>Sesi disimpan secara aman. Anda tetap memegang kendali penuh atas akun WhatsApp milik Anda.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="mulai">
+      <div class="wrap">
+        <div class="cta-box">
+          <h2>Siap Menjadikan Nomor Anda Bot?</h2>
+          <p>Daftar sekarang dan nikmati layanan jadibot WhatsApp dengan proses setup dalam hitungan detik.</p>
+          <button class="btn btn-primary" onclick="handleLogin()">Hubungkan Bot Sekarang</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="wrap">
+      <div class="footer-content">
+        <div>
+          <strong data-site-name>JADIBOT PIKACHU MD</strong>
+          <p style="margin-top: 4px;">Platform independen. Tidak berafiliasi dengan WhatsApp atau Meta.</p>
+        </div>
+        <div class="footer-links">
+          <a href="#">Cara Pakai</a>
+          <a href="#" onclick="handleLogin()">Masuk / Daftar</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- JavaScript -->
+  <script>
+    window.JPM = {
+      async api(path, opts = {}) {
+        const init = { method: opts.method || "GET", credentials: "same-origin", headers: {} };
+        if (init.method !== "GET") {
+          init.headers["content-type"] = "application/json";
+          init.headers["x-requested-with"] = "jadibot-web";
+          init.body = JSON.stringify(opts.body || {});
+        }
+        try {
+          const res = await fetch(path, init);
+          const data = await res.json().catch(() => ({}));
+          return { ...data, ok: !!data.ok, status: res.status };
+        } catch {
+          return { ok: false, status: 0, message: "Tidak bisa terhubung ke server" };
+        }
+      },
+      toast(text) {
+        let t = document.getElementById("toast");
+        if (!t) return;
+        t.textContent = text;
+        t.classList.add("show");
+        clearTimeout(t._h);
+        t._h = setTimeout(() => t.classList.remove("show"), 2600);
+      }
+    };
+
+    function handleLogin() {
+      JPM.toast("Mengarahkan ke halaman login...");
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1000);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const burger = document.getElementById("burger");
+      const links = document.getElementById("navlinks");
+
+      if (burger && links) {
+        burger.addEventListener("click", () => links.classList.toggle("open"));
+      }
+
+      document.querySelectorAll("#navlinks a").forEach((a) => {
+        a.addEventListener("click", () => links && links.classList.remove("open"));
+      });
+
+      // Load Public API Data
+      JPM.api("/api/public").then((d) => {
+        if (!d) return;
+        document.querySelectorAll("[data-site-name]").forEach((el) => {
+          el.textContent = d.siteName || "JADIBOT PIKACHU MD";
+        });
+        document.querySelectorAll("[data-stat-online]").forEach((el) => {
+          el.textContent = (d.online ?? 128).toLocaleString("id-ID");
+        });
+        document.querySelectorAll("[data-stat-users]").forEach((el) => {
+          el.textContent = (d.users ?? 1420).toLocaleString("id-ID");
+        });
+        document.querySelectorAll("[data-telegram]").forEach((el) => {
+          if (d.telegramUrl) el.href = d.telegramUrl;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
