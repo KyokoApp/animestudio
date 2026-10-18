@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sewa Bot WhatsApp | Soft Coffee</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #fdfbf7; color: #3e2f23; font-family: 'Segoe UI', sans-serif; }
+        .bg-coffee-light { background-color: #f4ece1; }
+        .text-coffee-brown { color: #7a4d31; }
+        .btn-coffee { background-color: #7a4d31; color: #fdfbf7; transition: 0.3s; }
+        .btn-coffee:hover { background-color: #5d3a24; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-coffee-brown mb-2">Sewa Bot WhatsApp</h1>
+        <p>Layanan bot handal, cepat, & soft vibes.</p>
+    </header>
+
+    <main class="max-w-4xl mx-auto space-y-10">
+        <section class="bg-coffee-light p-6 rounded-2xl shadow-sm">
+            <h2 class="text-2xl font-semibold mb-4">Pilih Paket</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="border border-coffee-brown p-4 rounded-xl">
+                    <h3 class="font-bold">Hemat</h3>
+                    <p class="text-xl">Rp10rb</p>
+                    <button onclick="alert('Paket Hemat dipilih!')" class="btn-coffee mt-2 w-full py-1 rounded">Pilih</button>
+                </div>
+                <!-- Tambah paket lain -->
+            </div>
+        </section>
+
+        <section id="faq" class="space-y-4">
+            <h2 class="text-2xl font-semibold">FAQ</h2>
+            <div class="bg-white p-4 rounded-xl shadow-sm">
+                <p class="font-bold">Apakah bot anti-banned?</p>
+                <p>Bot kami menggunakan metode aman dengan sistem limit.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Logika checkout WA
+        function checkoutWA(paket, harga) {
+            const waNumber = "628123456789";
+            const message = `Halo Admin, saya mau sewa paket ${paket} seharga ${harga}`;
+            window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
+        }
+    </script>
+</body>
+</html>
