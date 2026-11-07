@@ -11,13 +11,13 @@
 			-webkit-user-select: none;
 			user-select: none;
 		}
-		body {
+		html, body {
 			touch-action: none;
 			margin: 0;
 			border: 0;
 			padding: 0;
 			text-align: center;
-			background-color: #111417;
+			background-color: #0d1117;
 			overflow: hidden;
 			width: 100vw;
 			height: 100vh;
@@ -29,7 +29,7 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			background-color: #111417;
+			background-color: #0d1117;
 		}
 		#canvas {
 			display: block;
@@ -42,7 +42,7 @@
 			outline: none;
 		}
 
-		/* Loading Overlay */
+		/* Loading Screen */
 		#loading-screen {
 			position: absolute;
 			inset: 0;
@@ -52,7 +52,7 @@
 			justify-content: center;
 			background: linear-gradient(135deg, #1b261b, #0f140f);
 			color: #e5f0d8;
-			z-index: 50;
+			z-index: 100;
 			transition: opacity 0.5s ease;
 		}
 		#loading-screen.fade-out {
@@ -89,84 +89,126 @@
 			transition: width 0.15s ease;
 		}
 
-		/* Cozy Mobile Touch Overlay */
+		/* ── Mobile Touch Controls ─────────────────────────────────────────────── */
 		#touch-overlay {
 			position: absolute;
 			inset: 0;
 			pointer-events: none;
-			z-index: 40;
+			z-index: 50;
 			display: none;
 		}
 		body.is-mobile #touch-overlay {
 			display: block;
 		}
 
-		.dpad {
-			position: absolute;
-			bottom: 26px;
-			left: 20px;
-			width: 136px;
-			height: 136px;
-			pointer-events: auto;
-		}
 		.t-btn {
 			position: absolute;
-			background: rgba(255, 255, 255, 0.18);
-			backdrop-filter: blur(10px);
-			-webkit-backdrop-filter: blur(10px);
-			border: 1.5px solid rgba(168, 224, 99, 0.35);
+			background: rgba(22, 28, 22, 0.55);
+			backdrop-filter: blur(12px);
+			-webkit-backdrop-filter: blur(12px);
+			border: 1.5px solid rgba(168, 224, 99, 0.45);
 			color: #e8f5e9;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-			transition: transform 0.08s ease, background 0.08s ease;
+			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+			transition: transform 0.06s ease, background 0.06s ease;
 			touch-action: none;
+			pointer-events: auto;
+			user-select: none;
 		}
 		.t-btn:active, .t-btn.pressed {
-			background: rgba(168, 224, 99, 0.7);
-			color: #111417;
+			background: rgba(168, 224, 99, 0.85);
+			color: #0f140f;
 			transform: scale(0.92);
+		}
+
+		/* D-Pad (Kiri Bawah) */
+		.dpad-cluster {
+			position: absolute;
+			bottom: max(20px, env(safe-area-inset-bottom, 20px));
+			left: max(20px, env(safe-area-inset-left, 20px));
+			width: 140px;
+			height: 140px;
+			pointer-events: none;
 		}
 		.d-key {
 			width: 44px;
 			height: 44px;
 			border-radius: 12px;
 			font-size: 16px;
+			font-weight: bold;
 		}
-		.d-up    { top: 0; left: 46px; }
-		.d-down  { bottom: 0; left: 46px; }
-		.d-left  { top: 46px; left: 0; }
-		.d-right { top: 46px; right: 0; }
+		.d-up    { top: 0; left: 48px; }
+		.d-down  { bottom: 0; left: 48px; }
+		.d-left  { top: 48px; left: 0; }
+		.d-right { top: 48px; right: 0; }
 
-		/* Action Cluster */
-		.act-group {
+		/* Action Cluster (Kanan Bawah dengan Safe-Area Margin Lebar agar tidak ketutupan) */
+		.act-cluster {
 			position: absolute;
-			bottom: 26px;
-			right: 20px;
-			display: flex;
-			gap: 12px;
-			pointer-events: auto;
-			align-items: flex-end;
+			bottom: max(20px, env(safe-area-inset-bottom, 20px));
+			right: max(45px, calc(env(safe-area-inset-right, 20px) + 25px));
+			width: 180px;
+			height: 160px;
+			pointer-events: none;
 		}
-		.act-round {
-			width: 60px;
-			height: 60px;
+		.act-btn {
 			border-radius: 50%;
-			font-size: 13px;
-			font-weight: 700;
+			font-weight: 800;
 		}
-		.act-main {
-			background: rgba(168, 224, 99, 0.3);
+		/* Tombol Utama: AKSI / ENTER (Memilih di Menu / Mencangkul / Menyiram / Memancing) */
+		.btn-aksi {
+			width: 66px;
+			height: 66px;
+			bottom: 4px;
+			right: 4px;
+			background: rgba(168, 224, 99, 0.45);
+			border-color: rgba(168, 224, 99, 0.85);
+			color: #ffffff;
+			font-size: 13px;
+			letter-spacing: 0.5px;
+		}
+		/* Tombol Interaksi: E (Bicara / Buka Pintu / Periksa Objek) */
+		.btn-interact {
+			width: 52px;
+			height: 52px;
+			bottom: 12px;
+			left: 20px;
+			font-size: 14px;
+			background: rgba(45, 110, 60, 0.55);
 			border-color: rgba(168, 224, 99, 0.6);
 		}
-		.act-sub {
-			width: 48px;
-			height: 48px;
-			border-radius: 50%;
-			background: rgba(255, 255, 255, 0.15);
+		/* Tombol Tas / Tas Ransel: TAS / I (Inventory) */
+		.btn-bag {
+			width: 50px;
+			height: 50px;
+			top: 10px;
+			right: 25px;
+			font-size: 12px;
+			background: rgba(30, 45, 30, 0.6);
+		}
+		/* Tombol Menu / Pause: MENU / ESC (Kiri Atas atau Atas Tombol Tas) */
+		.btn-menu {
+			width: 46px;
+			height: 46px;
+			top: 25px;
+			left: 10px;
+			font-size: 10px;
+			background: rgba(30, 40, 50, 0.6);
+		}
+
+		/* Tombol Switch Tool Cepat (Ganti Alat di Hotbar) */
+		.btn-switch {
+			position: absolute;
+			bottom: max(20px, env(safe-area-inset-bottom, 20px));
+			left: calc(max(20px, env(safe-area-inset-left, 20px)) + 155px);
+			width: 44px;
+			height: 44px;
+			border-radius: 12px;
 			font-size: 11px;
-			font-weight: 600;
+			font-weight: 700;
+			background: rgba(40, 45, 40, 0.55);
 		}
 	</style>
 </head>
@@ -180,25 +222,29 @@
 	</div>
 
 	<div id="canvas-container">
-		<canvas id="canvas">
+		<canvas id="canvas" tabindex="1">
 			Browser tidak mendukung WebGL canvas.
 		</canvas>
 	</div>
 
 	<div id="touch-overlay">
-		<!-- D-pad Directional -->
-		<div class="dpad">
-			<div class="t-btn d-key d-up" data-key="ArrowUp" data-code="ArrowUp" data-keycode="38">▲</div>
-			<div class="t-btn d-key d-left" data-key="ArrowLeft" data-code="ArrowLeft" data-keycode="37">◀</div>
-			<div class="t-btn d-key d-down" data-key="ArrowDown" data-code="ArrowDown" data-keycode="40">▼</div>
-			<div class="t-btn d-key d-right" data-key="ArrowRight" data-code="ArrowRight" data-keycode="39">▶</div>
+		<!-- D-pad Cluster (Gerak Karakter & Navigasi Menu) -->
+		<div class="dpad-cluster">
+			<div class="t-btn d-key d-up"    data-action="up">▲</div>
+			<div class="t-btn d-key d-left"  data-action="left">◀</div>
+			<div class="t-btn d-key d-down"  data-action="down">▼</div>
+			<div class="t-btn d-key d-right" data-action="right">▶</div>
 		</div>
 
-		<!-- Action buttons -->
-		<div class="act-group">
-			<div class="t-btn act-round act-sub" data-key="Escape" data-code="Escape" data-keycode="27">MENU</div>
-			<div class="t-btn act-round act-sub" data-key="e" data-code="KeyE" data-keycode="69">E</div>
-			<div class="t-btn act-round act-main" data-key=" " data-code="Space" data-keycode="32">AKSI</div>
+		<!-- Tombol Ganti Alat Cepat (TAB / Switch Tool) -->
+		<div class="t-btn btn-switch" data-action="switch">TAB</div>
+
+		<!-- Action Cluster (Aman dari bezel tepi kanan layar) -->
+		<div class="act-cluster">
+			<div class="t-btn act-btn btn-menu"     data-action="menu">MENU</div>
+			<div class="t-btn act-btn btn-bag"      data-action="bag">TAS</div>
+			<div class="t-btn act-btn btn-interact" data-action="interact">E</div>
+			<div class="t-btn act-btn btn-aksi"     data-action="aksi">AKSI</div>
 		</div>
 	</div>
 
@@ -229,7 +275,7 @@
 						if (done) break;
 						chunks.push(value);
 						loadedBytes += value.length;
-						if (barFill) barFill.style.width = Math.min(90, Math.floor((loadedBytes / totalBytes) * 90)) + '%';
+						if (barFill) barFill.style.width = Math.min(92, Math.floor((loadedBytes / totalBytes) * 92)) + '%';
 					}
 					let partLen = chunks.reduce((a, b) => a + b.length, 0);
 					let partBuf = new Uint8Array(partLen);
@@ -242,7 +288,7 @@
 				}
 
 				if (loadingText) loadingText.textContent = 'Menyiapkan modul engine...';
-				if (barFill) barFill.style.width = '95%';
+				if (barFill) barFill.style.width = '96%';
 
 				let total = buffers.reduce((a, b) => a + b.length, 0);
 				let merged = new Uint8Array(total);
@@ -283,6 +329,7 @@
 			document.body.classList.add('is-mobile');
 		}
 
+		// Anti-reload resize guard
 		window.addEventListener('resize', (e) => {}, { passive: true });
 
 		const canvas = document.querySelector('#canvas');
@@ -290,12 +337,55 @@
 		const loadingText = document.querySelector('#loading-text');
 		const barFill = document.querySelector('#bar-fill');
 
-		function sendKey(type, key, code, keyCode) {
+		// ── Mapping Tombol Fisik Godot Lengkap ────────────────────────────────────
+		// Mengirimkan kombinasi event keyboard agar 100% diterima InputMap Godot:
+		// - 'aksi': ui_accept (Enter & Space) untuk pilih menu, cangkul, sabit, siram, mancing
+		// - 'interact': ui_interactH (KeyE) untuk bicara NPC, buka peti, masuk pintu
+		// - 'bag': ui_inventoryH (KeyI) untuk buka tas ransel/item
+		// - 'menu': ui_pauseH (Escape) untuk pause, tutup dialog, opsi
+		// - 'switch': ui_select_toolH (Tab) untuk ganti alat hotbar
+		// - 'up', 'down', 'left', 'right': Arrow keys + WASD
+		const ACTION_MAP = {
+			'up': [
+				{ key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+				{ key: 'w', code: 'KeyW', keyCode: 87 }
+			],
+			'down': [
+				{ key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+				{ key: 's', code: 'KeyS', keyCode: 83 }
+			],
+			'left': [
+				{ key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+				{ key: 'a', code: 'KeyA', keyCode: 65 }
+			],
+			'right': [
+				{ key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 },
+				{ key: 'd', code: 'KeyD', keyCode: 68 }
+			],
+			'aksi': [
+				{ key: 'Enter', code: 'Enter', keyCode: 13 },
+				{ key: ' ', code: 'Space', keyCode: 32 }
+			],
+			'interact': [
+				{ key: 'e', code: 'KeyE', keyCode: 69 }
+			],
+			'bag': [
+				{ key: 'i', code: 'KeyI', keyCode: 73 }
+			],
+			'menu': [
+				{ key: 'Escape', code: 'Escape', keyCode: 27 }
+			],
+			'switch': [
+				{ key: 'Tab', code: 'Tab', keyCode: 9 }
+			]
+		};
+
+		function triggerKeyEvent(type, def) {
 			const ev = new KeyboardEvent(type, {
-				key: key,
-				code: code,
-				keyCode: keyCode,
-				which: keyCode,
+				key: def.key,
+				code: def.code,
+				keyCode: def.keyCode,
+				which: def.keyCode,
 				bubbles: true,
 				cancelable: true
 			});
@@ -303,37 +393,37 @@
 			window.dispatchEvent(ev);
 		}
 
-		function setupButton(el) {
-			const key = el.getAttribute('data-key');
-			const code = el.getAttribute('data-code');
-			const keyCode = parseInt(el.getAttribute('data-keycode'), 10);
-			let down = false;
+		function setupAction(el) {
+			const actionName = el.getAttribute('data-action');
+			const keyDefs = ACTION_MAP[actionName] || [];
+			let active = false;
 
-			const start = (e) => {
+			const onStart = (e) => {
 				e.preventDefault();
-				if (down) return;
-				down = true;
+				if (active) return;
+				active = true;
 				el.classList.add('pressed');
-				sendKey('keydown', key, code, keyCode);
+				canvas.focus();
+				keyDefs.forEach(def => triggerKeyEvent('keydown', def));
 			};
 
-			const stop = (e) => {
+			const onEnd = (e) => {
 				e.preventDefault();
-				if (!down) return;
-				down = false;
+				if (!active) return;
+				active = false;
 				el.classList.remove('pressed');
-				sendKey('keyup', key, code, keyCode);
+				keyDefs.forEach(def => triggerKeyEvent('keyup', def));
 			};
 
-			el.addEventListener('touchstart', start, { passive: false });
-			el.addEventListener('touchend', stop, { passive: false });
-			el.addEventListener('touchcancel', stop, { passive: false });
-			el.addEventListener('mousedown', start);
-			el.addEventListener('mouseup', stop);
-			el.addEventListener('mouseleave', stop);
+			el.addEventListener('touchstart', onStart, { passive: false });
+			el.addEventListener('touchend', onEnd, { passive: false });
+			el.addEventListener('touchcancel', onEnd, { passive: false });
+			el.addEventListener('mousedown', onStart);
+			el.addEventListener('mouseup', onEnd);
+			el.addEventListener('mouseleave', onEnd);
 		}
 
-		document.querySelectorAll('.t-btn').forEach(setupButton);
+		document.querySelectorAll('.t-btn').forEach(setupAction);
 
 		// ── Start Engine dengan startGame standar ────────────────────────────────
 		const GODOT_CONFIG = {
