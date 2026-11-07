@@ -106,10 +106,10 @@
 
 	<!-- Hook fetch dengan Cache Storage & IndexedDB agar instan saat dibuka ulang -->
 	<script>
-		const CACHE_NAME = 'sprout-valley-cache-v4';
+		const CACHE_NAME = 'sprout-valley-cache-v5';
 		const DB_NAME = 'SproutValleyOfflineDB';
 		const STORE_NAME = 'game_assets';
-		const PCK_KEY = 'sprout_valley_pck_data_v4';
+		const PCK_KEY = 'sprout_valley_pck_data_v5';
 		const EXPECTED_TOTAL_BYTES = 119837536;
 
 		// ── IndexedDB Storage Helper ─────────────────────────────────────────────
@@ -390,18 +390,19 @@
 						const pct = Math.floor((current / total) * 100);
 						barFill.style.width = Math.max(parseInt(barFill.style.width || '0', 10), pct) + '%';
 					}
-				}
 			}).then(() => {
 				if (barFill) barFill.style.width = '100%';
 				if (loadingText) loadingText.textContent = 'Selamat bermain!';
-				setTimeout(() => {
+				const canvasElem = document.getElementById('canvas');
+				if (canvasElem) canvasElem.focus();
+				if (loadingScreen) {
 					loadingScreen.classList.add('fade-out');
-					setTimeout(() => loadingScreen.remove(), 500);
-				}, 400);
+					setTimeout(() => {
+						if (loadingScreen.parentNode) loadingScreen.remove();
+						if (canvasElem) canvasElem.focus();
+					}, 300);
+				}
 			}).catch((err) => {
-				console.error('[Godot Startup Error]', err);
-				loadingText.textContent = 'Error: ' + (err.message || err);
-			});
 		}
 	</script>
 </body>
