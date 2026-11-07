@@ -113,30 +113,73 @@
 		const EXPECTED_TOTAL_BYTES = 119837536;
 
 		// ── IndexedDB Storage Helper ─────────────────────────────────────────────
-		function openIDB() {
+		function openIDB(timeoutMs = 1500) {
 			return new Promise((resolve, reject) => {
 				if (!window.indexedDB) return reject(new Error('IndexedDB not supported'));
-				const req = indexedDB.open(DB_NAME, 1);
-				req.onupgradeneeded = (e) => {
-					const db = e.target.result;
-					if (!db.objectStoreNames.contains(STORE_NAME)) {
-						db.createObjectStore(STORE_NAME);
+				let settled = false;
+				const timer = setTimeout(() => {
+					if (!settled) {
+						settled = true;
+						reject(new Error('IndexedDB timeout'));
 					}
-				};
-				req.onsuccess = () => resolve(req.result);
-				req.onerror = () => reject(req.error);
+				}, timeoutMs);
+
+				try {
+					const req = indexedDB.open(DB_NAME, 1);
+					req.onupgradeneeded = (e) => {
+						const db = e.target.result;
+						if (!db.objectStoreNames.contains(STORE_NAME)) {
+							db.createObjectStore(STORE_NAME);
+						}
+					};
+					req.onsuccess = () => {
+						if (!settled) {
+							settled = true;
+							clearTimeout(timer);
+							resolve(req.result);
+						}
+					};
+					req.onerror = () => {
+						if (!settled) {
+							settled = true;
+							clearTimeout(timer);
+							reject(req.error);
+						}
+					};
+					req.onblocked = () => {
+						if (!settled) {
+							settled = true;
+							clearTimeout(timer);
+							reject(new Error('Blocked'));
+						}
+					};
+				} catch (err) {
+					if (!settled) {
+						settled = true;
+						clearTimeout(timer);
+						reject(err);
+					}
+				}
 			});
 		}
 
 		async function getFromIDB(key) {
 			try {
-				const db = await openIDB();
+				const db = await openIDB(1500);
 				return new Promise((resolve) => {
+					let done = false;
+					const timer = setTimeout(() => {
+						if (!done) { done = true; resolve(null); }
+					}, 1500);
 					const tx = db.transaction(STORE_NAME, 'readonly');
 					const store = tx.objectStore(STORE_NAME);
 					const req = store.get(key);
-					req.onsuccess = () => resolve(req.result || null);
-					req.onerror = () => resolve(null);
+					req.onsuccess = () => {
+						if (!done) { done = true; clearTimeout(timer); resolve(req.result || null); }
+					};
+					req.onerror = () => {
+						if (!done) { done = true; clearTimeout(timer); resolve(null); }
+					};
 				});
 			} catch (e) {
 				return null;
@@ -145,7 +188,7 @@
 
 		async function saveToIDB(key, val) {
 			try {
-				const db = await openIDB();
+				const db = await openIDB(1500);
 				return new Promise((resolve) => {
 					const tx = db.transaction(STORE_NAME, 'readwrite');
 					const store = tx.objectStore(STORE_NAME);
@@ -297,44 +340,37 @@
 	<!-- Cloud Save & Discord Activity Identity Sync Hook -->
 	<script>
 		(function() {
-			const SYNC_SERVER_URL = 'https://natsuki.web.id/api/group-activity'; // fallback or local sync bridge
 			const SPROUT_DISCORD_KEY = 'sprout_discord_user_id';
-
-			// Dapatkan User ID Discord dari query params Discord Activity atau simpanan sesi
 			const urlParams = new URLSearchParams(window.location.search);
 			let discordUserId = urlParams.get('user_id') || urlParams.get('discord_id');
 			if (discordUserId) {
 				try { localStorage.setItem(SPROUT_DISCORD_KEY, discordUserId); } catch(e) {}
-			} else {
-				try { discordUserId = localStorage.getItem(SPROUT_DISCORD_KEY); } catch(e) {}
 			}
 
-			// Observasi perubahan save IndexedDB Emscripten (/userfs)
-			window.addEventListener('beforeunload', () => {
-				triggerCloudSaveSync();
-			});
-
-			// Periksa berkala IndexedDB untuk autosave bedtime
+			// Jalankan polling save checker hanya setelah engine Godot aktif (delay 15 detik)
 			let lastSyncedTimestamp = 0;
-			async function triggerCloudSaveSync() {
+			function triggerCloudSaveSync() {
 				const uid = discordUserId || localStorage.getItem(SPROUT_DISCORD_KEY);
-				if (!uid) return;
+				if (!uid || !window.indexedDB) return;
 				try {
 					const dbReq = indexedDB.open('/userfs');
 					dbReq.onsuccess = function(e) {
 						const db = e.target.result;
-						if (!db.objectStoreNames.contains('FILE_DATA')) return;
+						if (!db.objectStoreNames.contains('FILE_DATA')) {
+							db.close();
+							return;
+						}
 						const tx = db.transaction('FILE_DATA', 'readonly');
 						const store = tx.objectStore('FILE_DATA');
 						const getReq = store.get('/userfs/save_state.sav');
 						getReq.onsuccess = function() {
+							db.close();
 							if (!getReq.result || !getReq.result.contents) return;
 							const fileData = getReq.result.contents;
 							const mtime = getReq.result.timestamp || Date.now();
 							if (mtime <= lastSyncedTimestamp) return;
 							lastSyncedTimestamp = mtime;
 							
-							// Payload ringkasan untuk bot Discord
 							const payload = {
 								user_id: uid,
 								last_sync: new Date().toISOString(),
@@ -348,14 +384,14 @@
 								mode: 'cors'
 							}).catch(() => {});
 						};
+						getReq.onerror = function() { db.close(); };
 					};
-				} catch(err) {
-					console.warn('[Cloud Sync Hook]', err);
-				}
+				} catch(err) {}
 			}
 
-			// Jalankan polling save checker setiap 30 detik
-			setInterval(triggerCloudSaveSync, 30000);
+			setTimeout(() => {
+				setInterval(triggerCloudSaveSync, 30000);
+			}, 15000);
 		})();
 	</script>
 
@@ -390,6 +426,7 @@
 						const pct = Math.floor((current / total) * 100);
 						barFill.style.width = Math.max(parseInt(barFill.style.width || '0', 10), pct) + '%';
 					}
+				}
 			}).then(() => {
 				if (barFill) barFill.style.width = '100%';
 				if (loadingText) loadingText.textContent = 'Selamat bermain!';
@@ -403,6 +440,9 @@
 					}, 300);
 				}
 			}).catch((err) => {
+				console.error('[Godot Startup Error]', err);
+				if (loadingText) loadingText.textContent = 'Error: ' + (err.message || err);
+			});
 		}
 	</script>
 </body>
