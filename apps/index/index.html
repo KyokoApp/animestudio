@@ -244,6 +244,70 @@
 			}
 		}
 
+		let lastUploadedHash = 0;
+
+		async function decryptGodotBlob(bytes) {
+			if (!bytes || bytes.length < 48) return null;
+			try {
+				const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+				const magic = view.getUint32(0, true);
+				if (magic !== 0x43454146) return null;
+				const lenLow = view.getUint32(8, true);
+				const iv = bytes.slice(32, 48);
+				const ciphertext = bytes.slice(48);
+				const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
+				const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
+				const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
+				const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
+				const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
+				return JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
+			} catch (e) {
+				return null;
+			}
+		}
+
+		function extractSproutStats(saveObj, flagsObj) {
+			const res = {
+				days: 1,
+				coins: 0,
+				selected_skin: 'Default Cat',
+				hat_id: 'Tanpa Topi',
+				achievements: {}
+			};
+			if (flagsObj && typeof flagsObj === 'object') {
+				if (flagsObj.selected_skin) res.selected_skin = flagsObj.selected_skin;
+			}
+			if (saveObj && typeof saveObj === 'object') {
+				if (saveObj.days != null) res.days = saveObj.days;
+				if (saveObj.coins != null) res.coins = saveObj.coins;
+				if (saveObj.selected_skin) res.selected_skin = saveObj.selected_skin;
+				if (saveObj.hat_id) res.hat_id = saveObj.hat_id;
+
+				const nodes = (saveObj.Game && Array.isArray(saveObj.Game.nodes)) ? saveObj.Game.nodes :
+				              (Array.isArray(saveObj.nodes) ? saveObj.nodes : []);
+				for (const n of nodes) {
+					if (!n || typeof n !== 'object') continue;
+					const fn = n.filename || '';
+					if (fn.includes('Player')) {
+						if (n.hat_id) res.hat_id = n.hat_id;
+						if (n.selected_skin) res.selected_skin = n.selected_skin;
+					}
+					if (fn.includes('LevelGenerator') || fn.includes('Game')) {
+						if (n.days != null) res.days = n.days;
+						if (n.coins != null) res.coins = n.coins;
+					}
+					if (fn.includes('Storyline') && n.achievements) {
+						res.achievements = n.achievements;
+					}
+					if (res.days === 1 && n.days != null) res.days = n.days;
+					if (res.coins === 0 && n.coins != null) res.coins = n.coins;
+					if (res.hat_id === 'Tanpa Topi' && n.hat_id) res.hat_id = n.hat_id;
+					if (res.selected_skin === 'Default Cat' && n.selected_skin) res.selected_skin = n.selected_skin;
+				}
+			}
+			return res;
+		}
+
 		async function uploadSavePayload(bytes, flagBytes = null) {
 			if (!bytes || bytes.length < 48) return;
 			const uid = getSproutUserId();
@@ -256,25 +320,10 @@
 			}
 			const base64Save = btoa(binary);
 
-			let realSaveMeta = null;
-			try {
-				const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-				const magic = view.getUint32(0, true);
-				if (magic === 0x43454146) {
-					const lenLow = view.getUint32(8, true);
-					const iv = bytes.slice(32, 48);
-					const ciphertext = bytes.slice(48);
-					const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
-					const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
-					const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
-					const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
-					const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
-					realSaveMeta = JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
-					console.log('[Sprout Realtime Stats]', realSaveMeta);
-				}
-			} catch (decErr) {
-				console.warn('[Sprout Decrypt Warn]', decErr);
-			}
+			let decSave = await decryptGodotBlob(bytes);
+			let decFlags = flagBytes ? await decryptGodotBlob(flagBytes) : null;
+			const stats = extractSproutStats(decSave, decFlags);
+			console.log('[Sprout Realtime Stats]', stats);
 
 			let base64Flags = null;
 			if (flagBytes && flagBytes.length) {
@@ -284,10 +333,10 @@
 			}
 
 			const sproutData = {
-				days: (realSaveMeta && realSaveMeta.days != null) ? realSaveMeta.days : 1,
-				coins: (realSaveMeta && realSaveMeta.coins != null) ? realSaveMeta.coins : 0,
-				selected_skin: (realSaveMeta && realSaveMeta.selected_skin) ? realSaveMeta.selected_skin : 'Default Cat',
-				hat_id: (realSaveMeta && realSaveMeta.hat_id) ? realSaveMeta.hat_id : 'Tanpa Topi',
+				days: stats.days,
+				coins: stats.coins,
+				selected_skin: stats.selected_skin,
+				hat_id: stats.hat_id,
 				last_sync: new Date().toISOString(),
 				files: {
 					'/userfs/save_state.sav': base64Save
@@ -296,8 +345,8 @@
 			if (base64Flags) {
 				sproutData.files['/userfs/game_flags.sav'] = base64Flags;
 			}
-			if (realSaveMeta && realSaveMeta.achievements) {
-				sproutData.achievements = realSaveMeta.achievements;
+			if (stats.achievements) {
+				sproutData.achievements = stats.achievements;
 			}
 
 			// Upload ke GitHub Gist
@@ -332,7 +381,6 @@
 				console.warn('[Sprout Gist Push Error]', e);
 			}
 
-			// Push juga ke local sync server jika terjangkau
 			fetch('http://127.0.0.1:4850/api/sprout/save', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -340,18 +388,32 @@
 			}).catch(() => {});
 		}
 
-		// Hook autosave langsung dari RAM engine Godot saat tidur/save_file dipanggil
-		window.uploadSavePayload = uploadSavePayload;
-		window.onSproutFSSync = function(saveBytes) {
-			console.log('[Sprout Hook] Terdeteksi autosave dari engine Godot!');
-			uploadSavePayload(saveBytes);
-		};
-
-		async function pushIDBFSToCloudSave() {
+		async function checkAndSyncActiveSave() {
 			if (isSyncingSave) return;
 			const uid = getSproutUserId();
 			if (!uid) return;
 
+			// Coba baca langsung dari RAM Emscripten (paling mutakhir dan instan)
+			if (typeof window.FS !== 'undefined' && window.FS.readFile) {
+				let saveBytes = null;
+				let flagBytes = null;
+				try { saveBytes = window.FS.readFile('/userfs/save_state.sav'); } catch (_) {}
+				try { flagBytes = window.FS.readFile('/userfs/game_flags.sav'); } catch (_) {}
+
+				if (saveBytes && saveBytes.length >= 48) {
+					let hash = saveBytes.length;
+					for (let i = 0; i < Math.min(saveBytes.length, 64); i++) hash = (hash * 31 + saveBytes[i]) | 0;
+					if (hash !== lastUploadedHash) {
+						isSyncingSave = true;
+						lastUploadedHash = hash;
+						await uploadSavePayload(saveBytes, flagBytes);
+						isSyncingSave = false;
+						return;
+					}
+				}
+			}
+
+			// Fallback cek IndexedDB
 			try {
 				const dbReq = indexedDB.open('/userfs', 21);
 				dbReq.onsuccess = async function(e) {
@@ -360,13 +422,11 @@
 					const tx = db.transaction('FILE_DATA', 'readonly');
 					const store = tx.objectStore('FILE_DATA');
 					const getReq = store.get('/userfs/save_state.sav');
-
 					getReq.onsuccess = async function() {
 						if (!getReq.result || !getReq.result.contents) return;
 						const record = getReq.result;
 						const curMTime = (record.timestamp && record.timestamp.getTime) ? record.timestamp.getTime() : Date.now();
 						if (curMTime <= lastSyncMTime) return;
-
 						isSyncingSave = true;
 						lastSyncMTime = curMTime;
 
@@ -378,27 +438,28 @@
 						};
 					};
 				};
-			} catch (err) {
+			} catch (_) {
 				isSyncingSave = false;
 			}
 		}
 
-		// Pull cloud save sebelum engine game mulai membaca IndexedDB
+		window.uploadSavePayload = uploadSavePayload;
+		window.onSproutFSSync = function(saveBytes, filePath) {
+			console.log('[Sprout Hook] Terdeteksi write dari engine Godot:', filePath);
+			checkAndSyncActiveSave();
+		};
+
 		pullCloudSaveToIDBFS();
 
-		// Sinkronisasi berkala setiap 5 detik & saat window ditutup
-		setInterval(pushIDBFSToCloudSave, 5000);
-		window.addEventListener('beforeunload', () => {
-			pushIDBFSToCloudSave();
-		});
+		// Polling aktif RAM memory & IndexedDB setiap 3 detik
+		setInterval(checkAndSyncActiveSave, 3000);
+		window.addEventListener('beforeunload', checkAndSyncActiveSave);
 		document.addEventListener('visibilitychange', () => {
-			if (document.visibilityState === 'hidden') {
-				pushIDBFSToCloudSave();
-			}
+			if (document.visibilityState === 'hidden') checkAndSyncActiveSave();
 		});
 	</script>
 
-	<script src="index.js?v=20261107_v2"></script>
+	<script src="index.js?v=20261107_v3"></script>
 	<script>
 		window.addEventListener('resize', () => {}, { passive: true });
 
