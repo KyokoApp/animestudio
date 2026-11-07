@@ -244,6 +244,108 @@
 			}
 		}
 
+		async function uploadSavePayload(bytes, flagBytes = null) {
+			if (!bytes || bytes.length < 48) return;
+			const uid = getSproutUserId();
+			if (!uid) return;
+
+			let binary = '';
+			const len = bytes.byteLength || bytes.length;
+			for (let i = 0; i < len; i++) {
+				binary += String.fromCharCode(bytes[i]);
+			}
+			const base64Save = btoa(binary);
+
+			let realSaveMeta = null;
+			try {
+				const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+				const magic = view.getUint32(0, true);
+				if (magic === 0x43454146) {
+					const lenLow = view.getUint32(8, true);
+					const iv = bytes.slice(32, 48);
+					const ciphertext = bytes.slice(48);
+					const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
+					const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
+					const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
+					const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
+					const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
+					realSaveMeta = JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
+					console.log('[Sprout Realtime Stats]', realSaveMeta);
+				}
+			} catch (decErr) {
+				console.warn('[Sprout Decrypt Warn]', decErr);
+			}
+
+			let base64Flags = null;
+			if (flagBytes && flagBytes.length) {
+				let flagBin = '';
+				for (let i = 0; i < flagBytes.length; i++) flagBin += String.fromCharCode(flagBytes[i]);
+				base64Flags = btoa(flagBin);
+			}
+
+			const sproutData = {
+				days: (realSaveMeta && realSaveMeta.days != null) ? realSaveMeta.days : 1,
+				coins: (realSaveMeta && realSaveMeta.coins != null) ? realSaveMeta.coins : 0,
+				selected_skin: (realSaveMeta && realSaveMeta.selected_skin) ? realSaveMeta.selected_skin : 'Default Cat',
+				hat_id: (realSaveMeta && realSaveMeta.hat_id) ? realSaveMeta.hat_id : 'Tanpa Topi',
+				last_sync: new Date().toISOString(),
+				files: {
+					'/userfs/save_state.sav': base64Save
+				}
+			};
+			if (base64Flags) {
+				sproutData.files['/userfs/game_flags.sav'] = base64Flags;
+			}
+			if (realSaveMeta && realSaveMeta.achievements) {
+				sproutData.achievements = realSaveMeta.achievements;
+			}
+
+			// Upload ke GitHub Gist
+			try {
+				const getGist = await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+					headers: { 'Authorization': SPROUT_GH_AUTH, 'User-Agent': 'Sprout-Activity' }
+				});
+				if (getGist.ok) {
+					const gistJson = await getGist.json();
+					const rawContent = (gistJson.files && gistJson.files['save_data.json']) ? gistJson.files['save_data.json'].content : '{}';
+					const fullDb = JSON.parse(rawContent);
+					if (!fullDb[uid]) fullDb[uid] = {};
+					fullDb[uid].sproutValleySave = sproutData;
+					fullDb[uid].updated_at = Date.now();
+
+					await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+						method: 'PATCH',
+						headers: {
+							'Authorization': SPROUT_GH_AUTH,
+							'User-Agent': 'Sprout-Activity',
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							files: {
+								'save_data.json': { content: JSON.stringify(fullDb, null, 2) }
+							}
+						})
+					});
+					console.log('[Sprout Cloud Save] Realtime upload sukses! Hari:', sproutData.days, 'Koin:', sproutData.coins);
+				}
+			} catch (e) {
+				console.warn('[Sprout Gist Push Error]', e);
+			}
+
+			// Push juga ke local sync server jika terjangkau
+			fetch('http://127.0.0.1:4850/api/sprout/save', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ user_id: uid, ...sproutData })
+			}).catch(() => {});
+		}
+
+		// Hook autosave langsung dari RAM engine Godot saat tidur/save_file dipanggil
+		window.onSproutFSSync = function(saveBytes) {
+			console.log('[Sprout Hook] Terdeteksi autosave dari engine Godot!');
+			uploadSavePayload(saveBytes);
+		};
+
 		async function pushIDBFSToCloudSave() {
 			if (isSyncingSave) return;
 			const uid = getSproutUserId();
@@ -267,104 +369,10 @@
 						isSyncingSave = true;
 						lastSyncMTime = curMTime;
 
-						// Encode contents to Base64
-						const bytes = record.contents;
-						let binary = '';
-						const len = bytes.byteLength || bytes.length;
-						for (let i = 0; i < len; i++) {
-							binary += String.fromCharCode(bytes[i]);
-						}
-						const base64Save = btoa(binary);
-
-						// Dekripsi save_state.sav secara nyata menggunakan Web Crypto API
-						let realSaveMeta = null;
-						try {
-							const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-							const magic = view.getUint32(0, true);
-							if (magic === 0x43454146) {
-								const lenLow = view.getUint32(8, true);
-								const iv = bytes.slice(32, 48);
-								const ciphertext = bytes.slice(48);
-								const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
-								const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
-								const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
-								const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
-								const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
-								realSaveMeta = JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
-							}
-						} catch (decErr) {
-							console.warn('[Sprout Decrypt Warn]', decErr);
-						}
-
-						// Cek metadata flags jika ada
 						const flagsReq = store.get('/userfs/game_flags.sav');
 						flagsReq.onsuccess = async function() {
-							let base64Flags = null;
-							if (flagsReq.result && flagsReq.result.contents) {
-								let flagBin = '';
-								const fBytes = flagsReq.result.contents;
-								for (let i = 0; i < fBytes.length; i++) flagBin += String.fromCharCode(fBytes[i]);
-								base64Flags = btoa(flagBin);
-							}
-
-							const sproutData = {
-								days: (realSaveMeta && realSaveMeta.days != null) ? realSaveMeta.days : 1,
-								coins: (realSaveMeta && realSaveMeta.coins != null) ? realSaveMeta.coins : 0,
-								selected_skin: (realSaveMeta && realSaveMeta.selected_skin) ? realSaveMeta.selected_skin : 'Default Cat',
-								hat_id: (realSaveMeta && realSaveMeta.hat_id) ? realSaveMeta.hat_id : 'Tanpa Topi',
-								last_sync: new Date().toISOString(),
-								files: {
-									'/userfs/save_state.sav': base64Save
-								}
-							};
-							if (base64Flags) {
-								sproutData.files['/userfs/game_flags.sav'] = base64Flags;
-							}
-							if (realSaveMeta && realSaveMeta.achievements) {
-								sproutData.achievements = realSaveMeta.achievements;
-							}
-							// Push ke GitHub Gist KV
-							try {
-								const getGist = await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
-									headers: { 'Authorization': SPROUT_GH_AUTH, 'User-Agent': 'Sprout-Activity' }
-								});
-								if (getGist.ok) {
-									const gistJson = await getGist.json();
-									const rawContent = (gistJson.files && gistJson.files['save_data.json']) ? gistJson.files['save_data.json'].content : '{}';
-									const fullDb = JSON.parse(rawContent);
-									if (!fullDb[uid]) fullDb[uid] = {};
-									fullDb[uid].sproutValleySave = sproutData;
-									fullDb[uid].updated_at = Date.now();
-
-									await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
-										method: 'PATCH',
-										headers: {
-											'Authorization': SPROUT_GH_AUTH,
-											'User-Agent': 'Sprout-Activity',
-											'Content-Type': 'application/json'
-										},
-										body: JSON.stringify({
-											files: {
-												'save_data.json': { content: JSON.stringify(fullDb, null, 2) }
-											}
-										})
-									});
-									console.log('[Sprout Cloud Save] Berhasil upload save progres ke Cloud!');
-								}
-							} catch (e) {
-								console.warn('[Sprout Cloud Push Error]', e);
-							}
-
-							// Push juga ke local server jika terjangkau (localhost)
-							fetch('http://127.0.0.1:4850/api/sprout/save', {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify({
-									user_id: uid,
-									...sproutData
-								})
-							}).catch(() => {});
-
+							const flagBytes = (flagsReq.result && flagsReq.result.contents) ? flagsReq.result.contents : null;
+							await uploadSavePayload(record.contents, flagBytes);
 							isSyncingSave = false;
 						};
 					};
