@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+    <title>An Average Day at the Cat Cafe</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #231f20;
+        touch-action: none;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      #canvas-wrap {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #231f20;
+      }
+      #unity-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+      }
+      #loading-cover {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #fbf5ea;
+        color: #563b3b;
+        z-index: 50;
+        transition: opacity 0.5s ease;
+      }
+      #loading-cover.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .loading-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #563b3b;
+        letter-spacing: 0.5px;
+      }
+      .loading-sub {
+        font-size: 13px;
+        color: #9c7b74;
+        margin-bottom: 24px;
+      }
+      .progress-bar-bg {
+        width: 220px;
+        height: 8px;
+        background: #e9dec9;
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+      }
+      .progress-bar-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #e8a87c, #c38d9e);
+        border-radius: 999px;
+        transition: width 0.2s ease;
+      }
+
+      /* ── Cozy Aesthetic Mobile Touch Controls ── */
+      #touch-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 40;
+        display: none;
+      }
+      body.is-mobile #touch-overlay {
+        display: block;
+      }
+
+      /* D-pad Virtual Joystick / Directional Keys */
+      .dpad-container {
+        position: absolute;
+        bottom: 24px;
+        left: 20px;
+        width: 136px;
+        height: 136px;
+        pointer-events: auto;
+      }
+      .dpad-btn {
+        position: absolute;
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 252, 246, 0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(133, 94, 82, 0.35);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #563b3b;
+        font-size: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.08s ease, background 0.08s ease;
+        touch-action: none;
+      }
+      .dpad-btn:active, .dpad-btn.pressed {
+        background: rgba(232, 168, 124, 0.85);
+        border-color: rgba(133, 94, 82, 0.6);
+        color: #fff;
+        transform: scale(0.92);
+      }
+      .dpad-up    { top: 0; left: 46px; }
+      .dpad-down  { bottom: 0; left: 46px; }
+      .dpad-left  { top: 46px; left: 0; }
+      .dpad-right { top: 46px; right: 0; }
+
+      /* Action Buttons (Right) */
+      .action-cluster {
+        position: absolute;
+        bottom: 24px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+        pointer-events: auto;
+      }
+      .act-btn {
+        background: rgba(255, 252, 246, 0.5);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1.5px solid rgba(133, 94, 82, 0.35);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #563b3b;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.08s ease, background 0.08s ease;
+        touch-action: none;
+      }
+      .act-btn:active, .act-btn.pressed {
+        transform: scale(0.92);
+      }
+      .act-interact {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(246, 215, 176, 0.75);
+        border-color: rgba(184, 137, 98, 0.6);
+        font-size: 14px;
+      }
+      .act-interact:active, .act-interact.pressed {
+        background: rgba(232, 168, 124, 0.95);
+        color: #fff;
+      }
+      .act-esc {
+        width: 48px;
+        height: 38px;
+        border-radius: 10px;
+        font-size: 12px;
+        background: rgba(255, 252, 246, 0.4);
+      }
+      .act-esc:active, .act-esc.pressed {
+        background: rgba(195, 141, 158, 0.85);
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-cover">
+      <div class="loading-title">🐾 Cat Cafe</div>
+      <div class="loading-sub">Menyiapkan kafe kucing santai...</div>
+      <div class="progress-bar-bg">
+        <div id="progress-fill" class="progress-bar-fill"></div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap">
+      <canvas id="unity-canvas" width="1280" height="720"></canvas>
+    </div>
+
+    <div id="touch-overlay">
+      <!-- D-Pad Directional -->
+      <div class="dpad-container">
+        <div class="dpad-btn dpad-up" data-key="ArrowUp" data-code="ArrowUp" data-keycode="38">▲</div>
+        <div class="dpad-btn dpad-left" data-key="ArrowLeft" data-code="ArrowLeft" data-keycode="37">◀</div>
+        <div class="dpad-btn dpad-down" data-key="ArrowDown" data-code="ArrowDown" data-keycode="40">▼</div>
+        <div class="dpad-btn dpad-right" data-key="ArrowRight" data-code="ArrowRight" data-keycode="39">▶</div>
+      </div>
+
+      <!-- Action Cluster -->
+      <div class="action-cluster">
+        <div class="act-btn act-esc" data-key="Escape" data-code="Escape" data-keycode="27">ESC</div>
+        <div class="act-btn act-interact" data-key=" " data-code="Space" data-keycode="32">🐾 Aksi</div>
+      </div>
+    </div>
+
+    <script src="Build/WebGL.loader.js"></script>
+    <script>
+      const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || ('ontouchstart' in window);
+      if (isMobile) {
+        document.body.classList.add('is-mobile');
+      }
+
+      const canvas = document.querySelector("#unity-canvas");
+      const progressFill = document.querySelector("#progress-fill");
+      const loadingCover = document.querySelector("#loading-cover");
+
+      // Discord Activity anti-reload on resize guard
+      window.addEventListener('resize', (e) => {
+        // Prevent default reload behavior inside Discord mobile webview
+      }, { passive: true });
+
+      function sendKeyEvent(type, key, code, keyCode) {
+        const ev = new KeyboardEvent(type, {
+          key: key,
+          code: code,
+          keyCode: keyCode,
+          which: keyCode,
+          bubbles: true,
+          cancelable: true
+        });
+        canvas.dispatchEvent(ev);
+        window.dispatchEvent(ev);
+        document.dispatchEvent(ev);
+      }
+
+      // Attach touch handlers for D-Pad and Action buttons
+      function bindTouchButton(el) {
+        const key = el.getAttribute('data-key');
+        const code = el.getAttribute('data-code');
+        const keyCode = parseInt(el.getAttribute('data-keycode'), 10);
+
+        let active = false;
+
+        const start = (e) => {
+          e.preventDefault();
+          if (active) return;
+          active = true;
+          el.classList.add('pressed');
+          sendKeyEvent('keydown', key, code, keyCode);
+        };
+
+        const end = (e) => {
+          e.preventDefault();
+          if (!active) return;
+          active = false;
+          el.classList.remove('pressed');
+          sendKeyEvent('keyup', key, code, keyCode);
+        };
+
+        el.addEventListener('touchstart', start, { passive: false });
+        el.addEventListener('touchend', end, { passive: false });
+        el.addEventListener('touchcancel', end, { passive: false });
+        el.addEventListener('mousedown', start);
+        el.addEventListener('mouseup', end);
+        el.addEventListener('mouseleave', end);
+      }
+
+      document.querySelectorAll('.dpad-btn, .act-btn').forEach(bindTouchButton);
+
+      // Load Unity WebGL instance
+      createUnityInstance(canvas, {
+        dataUrl: "Build/WebGL.data.gz",
+        frameworkUrl: "Build/WebGL.framework.js.gz",
+        codeUrl: "Build/WebGL.wasm.gz",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "alex angela atmos",
+        productName: "an avg day at the cat cafe",
+        productVersion: "0.1",
+      }, (progress) => {
+        progressFill.style.width = (100 * progress) + "%";
+      }).then((unityInstance) => {
+        setTimeout(() => {
+          loadingCover.classList.add('fade-out');
+          setTimeout(() => loadingCover.remove(), 500);
+        }, 400);
+      }).catch((message) => {
+        alert("Gagal memuat Cat Cafe: " + message);
+      });
+    </script>
+  </body>
+</html>
