@@ -154,7 +154,7 @@
 				merged.set(new Uint8Array(buf), offset);
 				offset += buf.byteLength;
 			}
-			if (barFill) barFill.style.width = '92%';
+			if (barFill) barFill.style.width = '90%';
 
 			const GODOT_CONFIG = {
 				args: [],
@@ -168,18 +168,17 @@
 
 			const engine = new Engine(GODOT_CONFIG);
 
-			// Preload buffer PCK langsung ke virtual filesystem Godot
+			// 1. Inisialisasi engine dengan executable base path "index" (memuat index.wasm)
+			await engine.init("index");
+			if (barFill) barFill.style.width = '95%';
+
+			// 2. Preload buffer PCK yang sudah digabung ke dalam filesystem virtual Godot
 			await engine.preloadFile(merged.buffer, 'index.pck');
 			if (barFill) barFill.style.width = '98%';
 
+			// 3. Jalankan instance engine yang sudah terinisialisasi
 			await engine.start({
-				'args': ['--main-pack', 'index.pck'],
-				'onProgress': function(current, total) {
-					if (total > 0 && barFill) {
-						const pct = Math.floor((current / total) * 100);
-						barFill.style.width = Math.max(parseInt(barFill.style.width || '0', 10), pct) + '%';
-					}
-				}
+				'args': ['--main-pack', 'index.pck']
 			});
 
 			if (barFill) barFill.style.width = '100%';
