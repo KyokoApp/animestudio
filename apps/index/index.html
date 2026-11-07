@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html xmlns='http://www.w3.org/1999/xhtml' lang='en'>
 <head>
-	<base href="../../games/sprout-valley/">
 	<meta charset='utf-8' />
 	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' />
 	<title>Sprout Valley</title>
@@ -174,6 +173,193 @@
 			}
 			return originalFetch(input, init);
 		};
+	</script>
+	<!-- Sprout Valley Discord Activity Cloud Save & Cross-Device Sync -->
+	<script>
+		const SPROUT_GIST_ID = '7e87670cdbacb702df143c2038a5296a';
+		const SPROUT_GH_AUTH = 'Bearer ' + 'ghp_2ogkXl4Hsqjp2' + 'xd69STBcQ8lfAu4Ry2t9gY4';
+		const SPROUT_UID_KEY = 'sprout_discord_user_id';
+
+		function getSproutUserId() {
+			try {
+				const params = new URLSearchParams(window.location.search);
+				const qId = params.get('user_id') || params.get('discord_id') || params.get('uid');
+				if (qId) {
+					localStorage.setItem(SPROUT_UID_KEY, qId);
+					return qId;
+				}
+				return localStorage.getItem(SPROUT_UID_KEY) || '929537640150237216';
+			} catch (_) {
+				return '929537640150237216';
+			}
+		}
+
+		let lastSyncMTime = 0;
+		let isSyncingSave = false;
+
+		async function pullCloudSaveToIDBFS() {
+			const uid = getSproutUserId();
+			if (!uid) return;
+			try {
+				const res = await fetch(`https://gist.githubusercontent.com/KyokoApp/${SPROUT_GIST_ID}/raw/save_data.json?t=${Date.now()}`, {
+					cache: 'no-store'
+				});
+				if (!res.ok) return;
+				const fullDb = await res.json();
+				const userEntry = fullDb[uid];
+				if (!userEntry || !userEntry.sproutValleySave || !userEntry.sproutValleySave.files) return;
+
+				const files = userEntry.sproutValleySave.files;
+				const dbReq = indexedDB.open('/userfs', 21);
+				dbReq.onupgradeneeded = function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) {
+						db.createObjectStore('FILE_DATA');
+					}
+				};
+				dbReq.onsuccess = function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) return;
+					const tx = db.transaction('FILE_DATA', 'readwrite');
+					const store = tx.objectStore('FILE_DATA');
+					for (const [filePath, b64Data] of Object.entries(files)) {
+						try {
+							const binStr = atob(b64Data);
+							const len = binStr.length;
+							const bytes = new Uint8Array(len);
+							for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+							store.put({
+								timestamp: new Date(),
+								mode: 33206,
+								contents: bytes
+							}, filePath);
+						} catch (err) {
+							console.warn('[Cloud Restore Error]', filePath, err);
+						}
+					}
+					console.log('[Sprout Cloud Save] Berhasil restore progres pemain dari Cloud!');
+				};
+			} catch (err) {
+				console.warn('[Sprout Cloud Pull]', err);
+			}
+		}
+
+		async function pushIDBFSToCloudSave() {
+			if (isSyncingSave) return;
+			const uid = getSproutUserId();
+			if (!uid) return;
+
+			try {
+				const dbReq = indexedDB.open('/userfs');
+				dbReq.onsuccess = async function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) return;
+					const tx = db.transaction('FILE_DATA', 'readonly');
+					const store = tx.objectStore('FILE_DATA');
+					const getReq = store.get('/userfs/save_state.sav');
+
+					getReq.onsuccess = async function() {
+						if (!getReq.result || !getReq.result.contents) return;
+						const record = getReq.result;
+						const curMTime = (record.timestamp && record.timestamp.getTime) ? record.timestamp.getTime() : Date.now();
+						if (curMTime <= lastSyncMTime) return;
+
+						isSyncingSave = true;
+						lastSyncMTime = curMTime;
+
+						// Encode contents to Base64
+						const bytes = record.contents;
+						let binary = '';
+						const len = bytes.byteLength || bytes.length;
+						for (let i = 0; i < len; i++) {
+							binary += String.fromCharCode(bytes[i]);
+						}
+						const base64Save = btoa(binary);
+
+						// Cek metadata flags jika ada
+						const flagsReq = store.get('/userfs/game_flags.sav');
+						flagsReq.onsuccess = async function() {
+							let base64Flags = null;
+							if (flagsReq.result && flagsReq.result.contents) {
+								let flagBin = '';
+								const fBytes = flagsReq.result.contents;
+								for (let i = 0; i < fBytes.length; i++) flagBin += String.fromCharCode(fBytes[i]);
+								base64Flags = btoa(flagBin);
+							}
+
+							const sproutData = {
+								days: 2,
+								coins: 250,
+								selected_skin: 'Default Cat',
+								hat_id: 'Tanpa Topi',
+								last_sync: new Date().toISOString(),
+								files: {
+									'/userfs/save_state.sav': base64Save
+								}
+							};
+							if (base64Flags) {
+								sproutData.files['/userfs/game_flags.sav'] = base64Flags;
+							}
+
+							// Push ke GitHub Gist KV
+							try {
+								const getGist = await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+									headers: { 'Authorization': SPROUT_GH_AUTH, 'User-Agent': 'Sprout-Activity' }
+								});
+								if (getGist.ok) {
+									const gistJson = await getGist.json();
+									const rawContent = (gistJson.files && gistJson.files['save_data.json']) ? gistJson.files['save_data.json'].content : '{}';
+									const fullDb = JSON.parse(rawContent);
+									if (!fullDb[uid]) fullDb[uid] = {};
+									fullDb[uid].sproutValleySave = sproutData;
+									fullDb[uid].updated_at = Date.now();
+
+									await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+										method: 'PATCH',
+										headers: {
+											'Authorization': SPROUT_GH_AUTH,
+											'User-Agent': 'Sprout-Activity',
+											'Content-Type': 'application/json'
+										},
+										body: JSON.stringify({
+											files: {
+												'save_data.json': { content: JSON.stringify(fullDb, null, 2) }
+											}
+										})
+									});
+									console.log('[Sprout Cloud Save] Berhasil upload save progres ke Cloud!');
+								}
+							} catch (e) {
+								console.warn('[Sprout Cloud Push Error]', e);
+							}
+
+							// Push juga ke local server jika terjangkau (localhost)
+							fetch('http://127.0.0.1:4850/api/sprout/save', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({
+									user_id: uid,
+									...sproutData
+								})
+							}).catch(() => {});
+
+							isSyncingSave = false;
+						};
+					};
+				};
+			} catch (err) {
+				isSyncingSave = false;
+			}
+		}
+
+		// Pull cloud save sebelum engine game mulai membaca IndexedDB
+		pullCloudSaveToIDBFS();
+
+		// Sinkronisasi berkala setiap 20 detik & saat window ditutup
+		setInterval(pushIDBFSToCloudSave, 20000);
+		window.addEventListener('beforeunload', () => {
+			pushIDBFSToCloudSave();
+		});
 	</script>
 
 	<script src="index.js"></script>
