@@ -105,104 +105,36 @@
 	</div>
 
 
-	<!-- Hook fetch dengan Cache Storage & IndexedDB agar instan saat dibuka ulang -->
+	<!-- Pemuat Data Game Cepat dengan Auto-Purge Cache Usang & Cache-Buster Otomatis -->
 	<script>
-		const CACHE_NAME = 'sprout-valley-cache-v6';
-		const DB_NAME = 'SproutValleyOfflineDB';
-		const STORE_NAME = 'game_assets';
-		const PCK_KEY = 'sprout_valley_pck_data_v6';
+		const CURRENT_BUILD_VERSION = 'v7';
+		const CACHE_NAME = 'sprout-valley-cache-' + CURRENT_BUILD_VERSION;
 		const EXPECTED_TOTAL_BYTES = 119837536;
 
-		// ── IndexedDB Storage Helper ─────────────────────────────────────────────
-		function openIDB(timeoutMs = 1500) {
-			return new Promise((resolve, reject) => {
-				if (!window.indexedDB) return reject(new Error('IndexedDB not supported'));
-				let settled = false;
-				const timer = setTimeout(() => {
-					if (!settled) {
-						settled = true;
-						reject(new Error('IndexedDB timeout'));
-					}
-				}, timeoutMs);
-
-				try {
-					const req = indexedDB.open(DB_NAME, 1);
-					req.onupgradeneeded = (e) => {
-						const db = e.target.result;
-						if (!db.objectStoreNames.contains(STORE_NAME)) {
-							db.createObjectStore(STORE_NAME);
+		// 1. Bersihkan cache versi lama secara otomatis tanpa perlu hapus data aplikasi HP
+		(async function autoPurgeOldCaches() {
+			try {
+				if ('caches' in window) {
+					const keys = await caches.keys();
+					for (const k of keys) {
+						if (k.startsWith('sprout-valley-cache-') && k !== CACHE_NAME) {
+							console.log('[Cache] Purging obsolete cache:', k);
+							await caches.delete(k);
 						}
-					};
-					req.onsuccess = () => {
-						if (!settled) {
-							settled = true;
-							clearTimeout(timer);
-							resolve(req.result);
-						}
-					};
-					req.onerror = () => {
-						if (!settled) {
-							settled = true;
-							clearTimeout(timer);
-							reject(req.error);
-						}
-					};
-					req.onblocked = () => {
-						if (!settled) {
-							settled = true;
-							clearTimeout(timer);
-							reject(new Error('Blocked'));
-						}
-					};
-				} catch (err) {
-					if (!settled) {
-						settled = true;
-						clearTimeout(timer);
-						reject(err);
 					}
 				}
-			});
-		}
+				// Hapus juga database IDB SproutValleyOfflineDB yang lama agar tidak mengunci storage
+				if (window.indexedDB && indexedDB.databases) {
+					const dbs = await indexedDB.databases();
+					for (const db of dbs) {
+						if (db.name === 'SproutValleyOfflineDB') {
+							indexedDB.deleteDatabase(db.name);
+						}
+					}
+				}
+			} catch(e) {}
+		})();
 
-		async function getFromIDB(key) {
-			try {
-				const db = await openIDB(1500);
-				return new Promise((resolve) => {
-					let done = false;
-					const timer = setTimeout(() => {
-						if (!done) { done = true; resolve(null); }
-					}, 1500);
-					const tx = db.transaction(STORE_NAME, 'readonly');
-					const store = tx.objectStore(STORE_NAME);
-					const req = store.get(key);
-					req.onsuccess = () => {
-						if (!done) { done = true; clearTimeout(timer); resolve(req.result || null); }
-					};
-					req.onerror = () => {
-						if (!done) { done = true; clearTimeout(timer); resolve(null); }
-					};
-				});
-			} catch (e) {
-				return null;
-			}
-		}
-
-		async function saveToIDB(key, val) {
-			try {
-				const db = await openIDB(1500);
-				return new Promise((resolve) => {
-					const tx = db.transaction(STORE_NAME, 'readwrite');
-					const store = tx.objectStore(STORE_NAME);
-					store.put(val, key);
-					tx.oncomplete = () => resolve(true);
-					tx.onerror = () => resolve(false);
-				});
-			} catch (e) {
-				return false;
-			}
-		}
-
-		// ── Pemuat Data Game dengan Cache Cepat ──────────────────────────────────
 		let cachedPCKResponsePromise = null;
 
 		function loadSplitPCK() {
@@ -212,7 +144,7 @@
 				const loadingText = document.querySelector('#loading-text');
 				const barFill = document.querySelector('#bar-fill');
 
-				// 1. Cek apakah sudah pernah tersimpan di Cache Storage browser
+				// A. Cek apakah build versi ini sudah tersimpan di CacheStorage
 				if ('caches' in window) {
 					try {
 						const cache = await caches.open(CACHE_NAME);
@@ -220,8 +152,8 @@
 						if (match) {
 							const cachedBuf = await match.arrayBuffer();
 							if (cachedBuf && cachedBuf.byteLength === EXPECTED_TOTAL_BYTES) {
-								if (loadingText) loadingText.textContent = 'Memuat game dari cache cepat...';
-								if (barFill) barFill.style.width = '95%';
+								if (loadingText) loadingText.textContent = 'Memuat game dari cache...';
+								if (barFill) barFill.style.width = '100%';
 								return new Response(cachedBuf, {
 									status: 200,
 									statusText: 'OK',
@@ -232,32 +164,15 @@
 								});
 							}
 						}
-					} catch (err) {
-						console.warn('[CacheStorage read err]', err);
-					}
+					} catch (err) {}
 				}
 
-				// 2. Cek apakah ada di IndexedDB
-				try {
-					const idbBuf = await getFromIDB(PCK_KEY);
-					if (idbBuf && idbBuf.byteLength === EXPECTED_TOTAL_BYTES) {
-						if (loadingText) loadingText.textContent = 'Memuat game dari penyimpanan lokal...';
-						if (barFill) barFill.style.width = '95%';
-						return new Response(idbBuf, {
-							status: 200,
-							statusText: 'OK',
-							headers: {
-								'Content-Type': 'application/octet-stream',
-								'Content-Length': String(idbBuf.byteLength)
-							}
-						});
-					}
-				} catch (err) {
-					console.warn('[IndexedDB read err]', err);
-				}
-
-				// 3. Unduh pertama kali via jaringan bila belum ada di cache
-				const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
+				// B. Unduh dengan query cache-buster agar HP selalu menarik part terbaru dari server
+				const parts = [
+					'index.pck.part_aa?v=' + CURRENT_BUILD_VERSION,
+					'index.pck.part_ab?v=' + CURRENT_BUILD_VERSION,
+					'index.pck.part_ac?v=' + CURRENT_BUILD_VERSION
+				];
 				let loadedBytes = 0;
 				const buffers = [];
 
@@ -272,7 +187,7 @@
 						if (done) break;
 						chunks.push(value);
 						loadedBytes += value.length;
-						if (barFill) barFill.style.width = Math.min(92, Math.floor((loadedBytes / EXPECTED_TOTAL_BYTES) * 92)) + '%';
+						if (barFill) barFill.style.width = Math.min(95, Math.floor((loadedBytes / EXPECTED_TOTAL_BYTES) * 95)) + '%';
 					}
 					let partLen = chunks.reduce((a, b) => a + b.length, 0);
 					let partBuf = new Uint8Array(partLen);
@@ -284,8 +199,8 @@
 					buffers.push(partBuf);
 				}
 
-				if (loadingText) loadingText.textContent = 'Menyimpan game ke memori HP...';
-				if (barFill) barFill.style.width = '96%';
+				if (loadingText) loadingText.textContent = 'Menyiapkan game...';
+				if (barFill) barFill.style.width = '98%';
 
 				let total = buffers.reduce((a, b) => a + b.length, 0);
 				let merged = new Uint8Array(total);
@@ -295,25 +210,14 @@
 					pos += b.length;
 				}
 
-				// Simpan ke CacheStorage & IndexedDB di latar belakang agar buka selanjutnya instan
-				(async () => {
-					try {
-						if ('caches' in window) {
-							const cache = await caches.open(CACHE_NAME);
-							await cache.put('index.pck', new Response(merged.buffer.slice(0), {
-								headers: { 'Content-Type': 'application/octet-stream' }
-							}));
-						}
-					} catch (e) {
-						console.warn('[CacheStorage save warn]', e);
-					}
-
-					try {
-						await saveToIDB(PCK_KEY, merged.buffer.slice(0));
-					} catch (e) {
-						console.warn('[IndexedDB save warn]', e);
-					}
-				})();
+				// C. Simpan ke CacheStorage versi ini di latar belakang
+				if ('caches' in window) {
+					caches.open(CACHE_NAME).then(c => {
+						c.put('index.pck', new Response(merged.buffer.slice(0), {
+							headers: { 'Content-Type': 'application/octet-stream' }
+						}));
+					}).catch(() => {});
+				}
 
 				return new Response(merged, {
 					status: 200,
@@ -332,7 +236,7 @@
 		const originalFetch = window.fetch;
 		window.fetch = function(input, init) {
 			const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-			if (url.endsWith('index.pck')) {
+			if (url.endsWith('index.pck') || url.includes('index.pck')) {
 				return loadSplitPCK();
 			}
 			return originalFetch.apply(this, arguments);
