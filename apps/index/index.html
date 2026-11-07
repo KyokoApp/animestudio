@@ -1,929 +1,351 @@
-<!doctype html>
-<html lang="en" data-theme="dark">
+<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml' lang='en'>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Aha Stream — Watch Anime Series, Movies & Latest Updates</title>
-  <meta name="theme-color" content="#0c1116">
-  
-  <!-- Fonts Poppins persis Anikai -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<meta charset='utf-8' />
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' />
+	<title>Sprout Valley</title>
+	<style>
+		* {
+			box-sizing: border-box;
+			-webkit-touch-callout: none;
+			-webkit-user-select: none;
+			user-select: none;
+		}
+		body {
+			touch-action: none;
+			margin: 0;
+			border: 0;
+			padding: 0;
+			text-align: center;
+			background-color: #111417;
+			overflow: hidden;
+			width: 100vw;
+			height: 100vh;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		}
+		#canvas-container {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background-color: #111417;
+		}
+		#canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			color: white;
+		}
+		#canvas:focus {
+			outline: none;
+		}
 
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #0c1116;
-      --surface: #11161b;
-      --panel: #151a20;
-      --control: #1d242c;
-      --control-hover: #262e38;
-      --muted: #a0a3a6;
-      --text: #e1e2e3;
-      --orange: #e45f3a;
-      --orange-hover: #f47750;
-      --orange-text: #10151a;
-      --green: #36cb68;
-      --border: rgba(255, 255, 255, 0.08);
-      --site-max-width: 2200px;
-    }
+		/* Loading Overlay */
+		#loading-screen {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(135deg, #243324, #141c14);
+			color: #e5f0d8;
+			z-index: 50;
+			transition: opacity 0.5s ease;
+		}
+		#loading-screen.fade-out {
+			opacity: 0;
+			pointer-events: none;
+		}
+		.game-logo {
+			font-size: 26px;
+			font-weight: 800;
+			letter-spacing: 1px;
+			color: #a8e063;
+			margin-bottom: 8px;
+			text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+		}
+		.loading-status-text {
+			font-size: 13px;
+			color: #c0d8b0;
+			margin-bottom: 22px;
+		}
+		.bar-track {
+			width: 240px;
+			height: 10px;
+			background: rgba(0, 0, 0, 0.45);
+			border: 1px solid rgba(168, 224, 99, 0.3);
+			border-radius: 999px;
+			overflow: hidden;
+			padding: 1px;
+		}
+		.bar-fill {
+			width: 0%;
+			height: 100%;
+			background: linear-gradient(90deg, #a8e063, #56ab2f);
+			border-radius: 999px;
+			transition: width 0.15s ease;
+		}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
+		/* Cozy Mobile Touch Overlay */
+		#touch-overlay {
+			position: absolute;
+			inset: 0;
+			pointer-events: none;
+			z-index: 40;
+			display: none;
+		}
+		body.is-mobile #touch-overlay {
+			display: block;
+		}
 
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 14px;
-      font-weight: 300;
-      min-height: 100vh;
-      overflow-x: hidden;
-      overflow-y: auto;
-      padding-bottom: 50px;
-    }
+		.dpad {
+			position: absolute;
+			bottom: 26px;
+			left: 20px;
+			width: 136px;
+			height: 136px;
+			pointer-events: auto;
+		}
+		.t-btn {
+			position: absolute;
+			background: rgba(255, 255, 255, 0.18);
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			border: 1.5px solid rgba(168, 224, 99, 0.35);
+			color: #e8f5e9;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+			transition: transform 0.08s ease, background 0.08s ease;
+			touch-action: none;
+		}
+		.t-btn:active, .t-btn.pressed {
+			background: rgba(168, 224, 99, 0.7);
+			color: #111417;
+			transform: scale(0.92);
+		}
+		.d-key {
+			width: 44px;
+			height: 44px;
+			border-radius: 12px;
+			font-size: 16px;
+		}
+		.d-up    { top: 0; left: 46px; }
+		.d-down  { bottom: 0; left: 46px; }
+		.d-left  { top: 46px; left: 0; }
+		.d-right { top: 46px; right: 0; }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    /* Header Nav Bar persis AniKai */
-    #home-header {
-      position: absolute;
-      top: 13px;
-      inset-x: 0;
-      z-index: 30;
-      width: 100%;
-    }
-    @media (min-width: 640px) {
-      #home-header {
-        top: 20px;
-      }
-    }
-
-    .header-bar {
-      position: relative;
-      margin: 0 auto;
-      display: flex;
-      height: 60px;
-      width: calc(100% - 24px);
-      max-width: var(--site-max-width);
-      align-items: center;
-      gap: 12px;
-      border-radius: 12px;
-      background: rgba(21, 26, 32, 0.85);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      padding: 0 16px;
-    }
-    @media (min-width: 640px) {
-      .header-bar {
-        height: 64px;
-        width: 94.5%;
-        padding: 0 24px;
-        gap: 24px;
-      }
-    }
-
-    .brand-logo-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 20px;
-      font-weight: 700;
-      color: #fff;
-      cursor: pointer;
-    }
-    .brand-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--orange);
-      box-shadow: 0 0 10px var(--orange);
-    }
-    .brand-text {
-      letter-spacing: -0.5px;
-    }
-    .brand-text span {
-      color: var(--orange);
-    }
-
-    /* Search Box */
-    .search-wrap {
-      flex: 1;
-      max-width: 440px;
-      position: relative;
-      margin-left: auto;
-    }
-    .search-input {
-      width: 100%;
-      height: 40px;
-      background: var(--control);
-      border: 1px solid transparent;
-      border-radius: 8px;
-      padding: 0 14px 0 38px;
-      color: #fff;
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-    .search-input:focus {
-      border-color: var(--orange);
-      background: var(--control-hover);
-    }
-    .search-icon-svg {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 16px;
-      height: 16px;
-      color: var(--muted);
-      pointer-events: none;
-    }
-
-    /* Hero Spotlight Carousel persis Anikai */
-    .hero {
-      position: relative;
-      height: 520px;
-      overflow: hidden;
-      background: var(--bg);
-      cursor: pointer;
-    }
-    @media (min-width: 640px) {
-      .hero {
-        height: 580px;
-      }
-    }
-
-    .hero-slide {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-    .hero-art {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 85%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center 25%;
-      opacity: 0.85;
-      transition: transform 0.6s ease;
-    }
-    .hero:hover .hero-art {
-      transform: scale(1.02);
-    }
-    .hero-slide::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background: 
-        linear-gradient(90deg, var(--bg) 5%, rgba(12, 17, 22, 0.9) 25%, rgba(12, 17, 22, 0.3) 65%, rgba(12, 17, 22, 0.5)),
-        linear-gradient(0deg, var(--bg) 0%, rgba(12, 17, 22, 0) 65%);
-    }
-
-    .site-container {
-      position: relative;
-      z-index: 10;
-      width: calc(100% - 24px);
-      max-width: var(--site-max-width);
-      margin: 0 auto;
-      height: 100%;
-      display: flex;
-      align-items: center;
-    }
-    @media (min-width: 640px) {
-      .site-container {
-        width: 94.5%;
-      }
-    }
-
-    .hero-detail {
-      width: 100%;
-      max-width: 680px;
-      padding-top: 60px;
-    }
-    .hero-title {
-      font-size: 26px;
-      font-weight: 600;
-      line-height: 1.25;
-      margin-bottom: 14px;
-      color: #fff;
-    }
-    @media (min-width: 640px) {
-      .hero-title {
-        font-size: 34px;
-      }
-    }
-    .hero-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .episode-badge {
-      color: var(--orange);
-      border: 1px solid var(--orange);
-      border-radius: 4px;
-      padding: 1px 6px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      line-height: 1.2;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .hero-description {
-      font-size: 13px;
-      line-height: 1.6;
-      color: var(--muted);
-      margin-bottom: 20px;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .watch-button {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--orange);
-      color: var(--orange-text);
-      font-weight: 600;
-      font-size: 14px;
-      padding: 10px 22px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .watch-button:hover {
-      background: var(--orange-hover);
-    }
-    .watch-button svg {
-      fill: currentColor;
-    }
-
-    /* Main Content Layout */
-    .content-wrapper {
-      position: relative;
-      z-index: 10;
-      width: calc(100% - 24px);
-      max-width: var(--site-max-width);
-      margin: 20px auto 0 auto;
-    }
-    @media (min-width: 640px) {
-      .content-wrapper {
-        width: 94.5%;
-      }
-    }
-
-    /* Genre filter pills */
-    .genres-nav {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 10px;
-      margin-bottom: 24px;
-      scrollbar-width: none;
-    }
-    .genres-nav::-webkit-scrollbar {
-      display: none;
-    }
-    .genre-pill {
-      background: var(--control);
-      color: var(--muted);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-      border: 1px solid transparent;
-    }
-    .genre-pill:hover {
-      background: var(--control-hover);
-      color: #fff;
-    }
-    .genre-pill.active {
-      background: var(--orange);
-      color: var(--orange-text);
-      font-weight: 600;
-    }
-
-    /* Section Heading */
-    .section-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
-    }
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-title::before {
-      content: "";
-      width: 4px;
-      height: 18px;
-      background: var(--orange);
-      border-radius: 2px;
-      display: inline-block;
-    }
-
-    /* Anime Grid persis Anikai */
-    .anime-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      row-gap: 24px;
-    }
-    @media (min-width: 576px) {
-      .anime-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-        row-gap: 26px;
-      }
-    }
-    @media (min-width: 992px) {
-      .anime-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        gap: 18px;
-        row-gap: 28px;
-      }
-    }
-
-    /* Card Item persis class .anime-card anikai */
-    .anime-card {
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-    }
-    .poster-link {
-      aspect-ratio: 3 / 4;
-      background: var(--control);
-      border-radius: 10px;
-      display: block;
-      position: relative;
-      overflow: hidden;
-    }
-    .poster-link img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: opacity 0.2s, transform 0.2s;
-      background: #151a20;
-    }
-    .anime-card:hover .poster-link img {
-      opacity: 0.85;
-      transform: scale(1.03);
-    }
-    .card-play {
-      opacity: 0;
-      color: #fff;
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.2s;
-      background: rgba(0, 0, 0, 0.3);
-    }
-    .card-play-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: var(--orange);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .card-play-icon svg {
-      fill: var(--orange-text);
-      width: 20px;
-      height: 20px;
-      margin-left: 2px;
-    }
-    .anime-card:hover .card-play {
-      opacity: 1;
-    }
-
-    .card-title {
-      font-size: 14px;
-      line-height: 20px;
-      margin-top: 10px;
-      margin-bottom: 6px;
-      font-weight: 500;
-      color: var(--text);
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      min-height: 40px;
-    }
-    .card-title:hover {
-      color: var(--orange);
-    }
-
-    .card-meta {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--muted);
-      flex-wrap: wrap;
-    }
-    .card-format {
-      text-transform: uppercase;
-    }
-
-    /* Modal Player persis anikai watch section */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.92);
-      backdrop-filter: blur(10px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 14px;
-    }
-    .modal-overlay.active {
-      display: flex;
-    }
-    .modal-content {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      width: 100%;
-      max-width: 960px;
-      max-height: 94vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-header {
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-    .modal-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 80%;
-    }
-    .modal-close {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--control);
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
-    .modal-close:hover {
-      background: var(--orange);
-      color: var(--orange-text);
-    }
-
-    .player-box {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      padding: 24px;
-      text-align: center;
-    }
-    .stream-backdrop {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.25;
-      pointer-events: none;
-    }
-    .player-actions {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      max-width: 480px;
-    }
-    .stream-main-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--orange);
-      color: var(--orange-text);
-      font-weight: 700;
-      font-size: 16px;
-      padding: 14px 28px;
-      border-radius: 30px;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(228, 95, 58, 0.4);
-      transition: all 0.2s ease;
-      text-decoration: none;
-    }
-    .stream-main-btn:hover {
-      background: var(--orange-hover);
-      transform: scale(1.04);
-    }
-    .stream-note {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .episodes-panel {
-      padding: 20px;
-    }
-    .episodes-header {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .episodes-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-      gap: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .ep-item {
-      height: 36px;
-      background: var(--control);
-      border: 1px solid transparent;
-      border-radius: 6px;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .ep-item:hover {
-      background: var(--control-hover);
-      color: #fff;
-    }
-    .ep-item.active {
-      background: var(--orange);
-      color: var(--orange-text);
-      font-weight: 600;
-    }
-  </style>
+		/* Action Cluster */
+		.act-group {
+			position: absolute;
+			bottom: 26px;
+			right: 20px;
+			display: flex;
+			gap: 12px;
+			pointer-events: auto;
+			align-items: flex-end;
+		}
+		.act-round {
+			width: 60px;
+			height: 60px;
+			border-radius: 50%;
+			font-size: 13px;
+			font-weight: 700;
+		}
+		.act-main {
+			background: rgba(168, 224, 99, 0.3);
+			border-color: rgba(168, 224, 99, 0.6);
+		}
+		.act-sub {
+			width: 48px;
+			height: 48px;
+			border-radius: 50%;
+			background: rgba(255, 255, 255, 0.15);
+			font-size: 11px;
+			font-weight: 600;
+		}
+	</style>
 </head>
 <body>
-  <!-- Header Bar -->
-  <header id="home-header">
-    <div class="header-bar">
-      <div class="brand-logo-link" onclick="resetFilter()">
-        <div class="brand-dot"></div>
-        <div class="brand-text">Aha<span>Stream</span></div>
-      </div>
+	<div id="loading-screen">
+		<div class="game-logo">🌾 Sprout Valley</div>
+		<div id="loading-text" class="loading-status-text">Memuat paket game bertani...</div>
+		<div class="bar-track">
+			<div id="bar-fill" class="bar-fill"></div>
+		</div>
+	</div>
 
-      <div class="search-wrap">
-        <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search anime..." autocomplete="off">
-      </div>
-    </div>
-  </header>
+	<div id="canvas-container">
+		<canvas id="canvas">
+			Browser tidak mendukung WebGL canvas.
+		</canvas>
+	</div>
 
-  <!-- Hero Spotlight Section -->
-  <section class="hero" id="heroBanner" style="display:none;">
-    <article class="hero-slide">
-      <img id="heroImg" class="hero-art" src="" alt="Hero anime art">
-      <div class="site-container">
-        <div class="hero-detail">
-          <h2 id="heroTitle" class="hero-title"></h2>
-          <div class="hero-info">
-            <span id="heroEp" class="episode-badge">EP 7</span>
-            <span id="heroType">TV</span>
-            <span id="heroGenres">Action, Adventure</span>
-            <span id="heroScore">⭐ 9.1</span>
-          </div>
-          <p id="heroDesc" class="hero-description">Discover featured anime, recent episode updates, new releases and completed series on Aha Stream.</p>
-          <div class="watch-button" id="heroWatchBtn">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path d="m8 4 13 8-13 8z"/></svg>
-            <span>Watch Now</span>
-          </div>
-        </div>
-      </div>
-    </article>
-  </section>
+	<div id="touch-overlay">
+		<!-- D-pad Directional -->
+		<div class="dpad">
+			<div class="t-btn d-key d-up" data-key="ArrowUp" data-code="ArrowUp" data-keycode="38">▲</div>
+			<div class="t-btn d-key d-left" data-key="ArrowLeft" data-code="ArrowLeft" data-keycode="37">◀</div>
+			<div class="t-btn d-key d-down" data-key="ArrowDown" data-code="ArrowDown" data-keycode="40">▼</div>
+			<div class="t-btn d-key d-right" data-key="ArrowRight" data-code="ArrowRight" data-keycode="39">▶</div>
+		</div>
 
-  <!-- Content Section -->
-  <main class="content-wrapper">
-    <!-- Genre Filter Navigation -->
-    <div class="genres-nav">
-      <button class="genre-pill active" onclick="setCategory('ALL')">All</button>
-      <button class="genre-pill" onclick="setCategory('Action')">Action</button>
-      <button class="genre-pill" onclick="setCategory('Adventure')">Adventure</button>
-      <button class="genre-pill" onclick="setCategory('Fantasy')">Fantasy</button>
-      <button class="genre-pill" onclick="setCategory('Romance')">Romance</button>
-      <button class="genre-pill" onclick="setCategory('Comedy')">Comedy</button>
-      <button class="genre-pill" onclick="setCategory('Supernatural')">Supernatural</button>
-      <button class="genre-pill" onclick="setCategory('Drama')">Drama</button>
-      <button class="genre-pill" onclick="setCategory('Mystery')">Mystery</button>
-    </div>
+		<!-- Action buttons -->
+		<div class="act-group">
+			<div class="t-btn act-round act-sub" data-key="Escape" data-code="Escape" data-keycode="27">MENU</div>
+			<div class="t-btn act-round act-sub" data-key="e" data-code="KeyE" data-keycode="69">E</div>
+			<div class="t-btn act-round act-main" data-key=" " data-code="Space" data-keycode="32">AKSI</div>
+		</div>
+	</div>
 
-    <!-- Section Heading -->
-    <div class="section-head">
-      <div class="section-title" id="gridHeading">Latest Updates</div>
-      <span id="gridCount" style="font-size:12px; color:var(--muted);">Loading...</span>
-    </div>
+	<script src="index.js"></script>
+	<script>
+		const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || ('ontouchstart' in window);
+		if (isMobile) {
+			document.body.classList.add('is-mobile');
+		}
 
-    <!-- Anime Grid persis AniKai -->
-    <div id="latest-grid" class="anime-grid">
-      <div style="grid-column: 1 / -1; text-align:center; padding: 40px 0; color:var(--muted);">
-        Loading catalog...
-      </div>
-    </div>
-  </main>
+		// Discord Activity mobile anti-reload safeguard
+		window.addEventListener('resize', (e) => {}, { passive: true });
 
-  <!-- Modal Watch Player -->
-  <div id="watchModal" class="modal-overlay">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-title" id="playerTitle">Anime Player</div>
-        <button class="modal-close" onclick="closePlayer()">✕</button>
-      </div>
+		const canvas = document.querySelector('#canvas');
+		const loadingScreen = document.querySelector('#loading-screen');
+		const loadingText = document.querySelector('#loading-text');
+		const barFill = document.querySelector('#bar-fill');
 
-      <div class="player-box">
-        <img id="playerBackdrop" class="stream-backdrop" src="" alt="Backdrop">
-        <div class="player-actions">
-          <a id="streamDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="stream-main-btn">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m8 4 13 8-13 8z"/></svg>
-            <span id="streamBtnText">Stream Episode 1 HD</span>
-          </a>
-          <p class="stream-note">
-            Bypass proteksi CSP & frame-ancestors. Stream server aktif (Sub / Dub / 1080p).
-          </p>
-        </div>
-      </div>
+		function sendKey(type, key, code, keyCode) {
+			const ev = new KeyboardEvent(type, {
+				key: key,
+				code: code,
+				keyCode: keyCode,
+				which: keyCode,
+				bubbles: true,
+				cancelable: true
+			});
+			canvas.dispatchEvent(ev);
+			window.dispatchEvent(ev);
+		}
 
-      <div class="episodes-panel">
-        <div class="episodes-header">
-          <span class="episode-badge" id="playerBadge">EP 1</span>
-          <span>Select Episode</span>
-        </div>
-        <div class="episodes-grid" id="episodesGrid"></div>
-      </div>
-    </div>
-  </div>
+		function setupButton(el) {
+			const key = el.getAttribute('data-key');
+			const code = el.getAttribute('data-code');
+			const keyCode = parseInt(el.getAttribute('data-keycode'), 10);
+			let down = false;
 
-  <script>
-    let catalog = [];
-    let activeCategory = 'ALL';
-    let currentAnime = null;
-    let selectedEp = 1;
+			const start = (e) => {
+				e.preventDefault();
+				if (down) return;
+				down = true;
+				el.classList.add('pressed');
+				sendKey('keydown', key, code, keyCode);
+			};
 
-    // Helper SVG Data URI untuk thumbnail lolos 100% CSP Discord
-    function getPosterSvgUri(title, score, year, format) {
-      const safeTitle = (title || 'Anime').replace(/[<>&"]/g, '');
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" width="100%" height="100%">
-        <defs>
-          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#192027"/>
-            <stop offset="100%" stop-color="#0c1116"/>
-          </linearGradient>
-        </defs>
-        <rect width="360" height="480" fill="url(#g)" rx="10"/>
-        <circle cx="180" cy="180" r="46" fill="#e45f3a" opacity="0.15"/>
-        <path d="M172 162 L198 180 L172 198 Z" fill="#e45f3a"/>
-        <text x="180" y="270" fill="#ffffff" font-family="Poppins, sans-serif" font-size="16" font-weight="600" text-anchor="middle">
-          ${safeTitle.length > 22 ? safeTitle.slice(0, 20) + '...' : safeTitle}
-        </text>
-        <text x="180" y="300" fill="#a0a3a6" font-family="Poppins, sans-serif" font-size="13" text-anchor="middle">
-          ⭐ ${score || '8.5'} • ${year || '2026'} • ${format || 'TV'}
-        </text>
-        <rect x="135" y="330" width="90" height="26" rx="13" fill="#e45f3a" opacity="0.2"/>
-        <text x="180" y="347" fill="#e45f3a" font-family="Poppins, sans-serif" font-size="11" font-weight="600" text-anchor="middle">
-          AHA STREAM
-        </text>
-      </svg>`;
-      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-    }
+			const stop = (e) => {
+				e.preventDefault();
+				if (!down) return;
+				down = false;
+				el.classList.remove('pressed');
+				sendKey('keyup', key, code, keyCode);
+			};
 
-    // Load Catalog
-    async function loadCatalog() {
-      try {
-        let res;
-        try {
-          res = await fetch('./catalog.json');
-        } catch {
-          res = await fetch('https://anikai.org/catalog-index.json');
-        }
-        if (!res.ok) {
-          res = await fetch('https://anikai.org/catalog-index.json');
-        }
-        catalog = await res.json();
-        
-        initHero();
-        renderGrid();
-      } catch (err) {
-        document.getElementById('latest-grid').innerHTML = `
-          <div style="grid-column: 1 / -1; text-align:center; padding: 40px; color:var(--muted);">
-            ⚠️ Failed to load catalog. Please refresh.
-          </div>
-        `;
-      }
-    }
+			el.addEventListener('touchstart', start, { passive: false });
+			el.addEventListener('touchend', stop, { passive: false });
+			el.addEventListener('touchcancel', stop, { passive: false });
+			el.addEventListener('mousedown', start);
+			el.addEventListener('mouseup', stop);
+			el.addEventListener('mouseleave', stop);
+		}
 
-    function initHero() {
-      if (!catalog || catalog.length === 0) return;
-      const hero = catalog.find(x => x.y >= 2025 && (x.sc >= 8.5 || x.sc >= 7.5)) || catalog[0];
-      if (!hero) return;
+		document.querySelectorAll('.t-btn').forEach(setupButton);
 
-      const banner = document.getElementById('heroBanner');
-      const img = document.getElementById('heroImg');
-      
-      const svgFallback = getPosterSvgUri(hero.n, hero.sc, hero.y, hero.f);
-      img.src = `https://img.anikai.org/hero/w_900/h_540/${hero.s}.webp`;
-      img.onerror = () => { img.src = svgFallback; };
+		// ── Assembling Split PCK Chunks ─────────────────────────────────────────
+		async function fetchAndReassemblePCK() {
+			const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
+			const totalBytes = 119837536;
+			let loadedBytes = 0;
+			const buffers = [];
 
-      document.getElementById('heroTitle').textContent = hero.n;
-      document.getElementById('heroEp').textContent = `EP ${hero.tt || 12}`;
-      document.getElementById('heroType').textContent = hero.f || 'TV';
-      document.getElementById('heroGenres').textContent = (hero.g || []).slice(0, 3).join(', ');
-      document.getElementById('heroScore').textContent = hero.sc ? `⭐ ${hero.sc}` : '⭐ 8.8';
+			for (let i = 0; i < parts.length; i++) {
+				loadingText.textContent = `Mengunduh data pulau Sprout Valley (${i + 1}/${parts.length})...`;
+				const res = await fetch(parts[i]);
+				if (!res.ok) throw new Error(`Gagal mengunduh bagian ${parts[i]}: ${res.status}`);
+				const reader = res.body.getReader();
+				const chunks = [];
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					chunks.push(value);
+					loadedBytes += value.length;
+					const pct = Math.min(95, Math.floor((loadedBytes / totalBytes) * 95));
+					barFill.style.width = pct + '%';
+				}
+				// Gabungkan chunk bagian ini
+				let partLen = chunks.reduce((acc, c) => acc + c.length, 0);
+				let partBuf = new Uint8Array(partLen);
+				let offset = 0;
+				for (const c of chunks) {
+					partBuf.set(c, offset);
+					offset += c.length;
+				}
+				buffers.push(partBuf);
+			}
 
-      banner.onclick = () => openWatch(hero);
-      banner.style.display = 'block';
-    }
+			loadingText.textContent = 'Menyatukan modul permainan...';
+			barFill.style.width = '98%';
 
-    function renderGrid() {
-      const search = document.getElementById('searchInput').value.trim().toLowerCase();
-      const grid = document.getElementById('latest-grid');
-      
-      let list = catalog;
+			let totalLen = buffers.reduce((acc, b) => acc + b.length, 0);
+			let merged = new Uint8Array(totalLen);
+			let cur = 0;
+			for (const b of buffers) {
+				merged.set(b, cur);
+				cur += b.length;
+			}
+			return merged.buffer;
+		}
 
-      if (activeCategory !== 'ALL') {
-        list = list.filter(x => (x.g || []).includes(activeCategory));
-      }
+		// ── Init Godot Engine ────────────────────────────────────────────────────
+		async function startSproutValley() {
+			try {
+				const pckBuffer = await fetchAndReassemblePCK();
+				loadingText.textContent = 'Memulai Godot Web Engine...';
 
-      if (search) {
-        list = list.filter(x => 
-          (x.n && x.n.toLowerCase().includes(search)) ||
-          (x.j && x.j.toLowerCase().includes(search))
-        );
-      }
+				const GODOT_CONFIG = {
+					args: [],
+					canvasResizePolicy: 2,
+					executable: "index",
+					experimentalVK: false,
+					fileSizes: { "index.pck": pckBuffer.byteLength, "index.wasm": 13790961 },
+					focusCanvas: true,
+					gdnativeLibs: []
+				};
 
-      document.getElementById('gridCount').textContent = `${list.length} anime`;
+				const engine = new Engine(GODOT_CONFIG);
 
-      if (list.length === 0) {
-        grid.innerHTML = `
-          <div style="grid-column: 1 / -1; text-align:center; padding: 50px 20px; color:var(--muted);">
-            🔍 No anime found for "<b>${search}</b>".
-          </div>
-        `;
-        return;
-      }
+				await engine.init("index");
+				await engine.preloadFile(pckBuffer, "index.pck");
+				await engine.start();
 
-      const items = list.slice(0, 60);
+				barFill.style.width = '100%';
+				loadingText.textContent = 'Siap bermain!';
+				setTimeout(() => {
+					loadingScreen.classList.add('fade-out');
+					setTimeout(() => loadingScreen.remove(), 500);
+				}, 400);
+			} catch (err) {
+				console.error('[Sprout Valley Load Error]', err);
+				loadingText.textContent = 'Error: ' + (err.message || err);
+			}
+		}
 
-      grid.innerHTML = items.map(anime => {
-        const svgFallback = getPosterSvgUri(anime.n, anime.sc, anime.y, anime.f);
-        return `
-        <article class="anime-card" onclick="openWatchById(${anime.i})">
-          <div class="poster-link">
-            <img 
-              src="https://img.anikai.org/poster/w_360/h_480/${anime.s}.webp" 
-              alt="${anime.n}" 
-              loading="lazy" 
-              decoding="async"
-              onerror="this.onerror=null; this.src='${svgFallback}';"
-            >
-            <span class="card-play">
-              <span class="card-play-icon">
-                <svg viewBox="0 0 24 24"><path d="m8 4 13 8-13 8z"/></svg>
-              </span>
-            </span>
-          </div>
-          <h3 class="card-title">${anime.n}</h3>
-          <div class="card-meta">
-            <span class="episode-badge" aria-label="${anime.tt || 12} episodes">EP ${anime.tt || 12}</span>
-            <span>${anime.y || 2026}</span>
-            <span class="card-format">${anime.f || 'TV'}</span>
-          </div>
-        </article>
-      `}).join('');
-    }
-
-    function setCategory(cat) {
-      activeCategory = cat;
-      document.querySelectorAll('.genre-pill').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent === (cat === 'ALL' ? 'All' : cat));
-      });
-      renderGrid();
-    }
-
-    function resetFilter() {
-      activeCategory = 'ALL';
-      document.getElementById('searchInput').value = '';
-      setCategory('ALL');
-    }
-
-    document.getElementById('searchInput').addEventListener('input', () => {
-      renderGrid();
-    });
-
-    function openWatchById(id) {
-      const anime = catalog.find(x => x.i === id);
-      if (anime) openWatch(anime);
-    }
-
-    function openWatch(anime) {
-      currentAnime = anime;
-      selectedEp = 1;
-
-      document.getElementById('playerTitle').textContent = anime.n;
-      document.getElementById('playerBadge').textContent = `EP 1`;
-      document.getElementById('watchModal').classList.add('active');
-
-      const backdrop = document.getElementById('playerBackdrop');
-      backdrop.src = `https://img.anikai.org/hero/w_900/h_540/${anime.s}.webp`;
-      backdrop.onerror = () => { backdrop.src = getPosterSvgUri(anime.n, anime.sc, anime.y, anime.f); };
-
-      const total = anime.tt || 12;
-      const grid = document.getElementById('episodesGrid');
-      grid.innerHTML = '';
-
-      for (let i = 1; i <= Math.min(total, 24); i++) {
-        const btn = document.createElement('button');
-        btn.className = `ep-item ${i === 1 ? 'active' : ''}`;
-        btn.textContent = `EP ${i}`;
-        btn.onclick = () => {
-          selectedEp = i;
-          document.querySelectorAll('.ep-item').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          document.getElementById('playerBadge').textContent = `EP ${i}`;
-          updateStreamAction();
-        };
-        grid.appendChild(btn);
-      }
-
-      updateStreamAction();
-    }
-
-    function updateStreamAction() {
-      if (!currentAnime) return;
-      const btn = document.getElementById('streamDirectLink');
-      const text = document.getElementById('streamBtnText');
-      text.textContent = `Stream Episode ${selectedEp} HD (Bypass CSP)`;
-      btn.href = `https://anikai.org/watch/${currentAnime.s}-${selectedEp}/`;
-    }
-
-    function closePlayer() {
-      document.getElementById('watchModal').classList.remove('active');
-    }
-
-    document.getElementById('watchModal').addEventListener('click', (e) => {
-      if (e.target.id === 'watchModal') closePlayer();
-    });
-
-    loadCatalog();
-  </script>
+		if (Engine.isWebGLAvailable()) {
+			startSproutValley();
+		} else {
+			loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
+		}
+	</script>
 </body>
 </html>
