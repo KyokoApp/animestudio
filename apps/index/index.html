@@ -341,6 +341,7 @@
 		}
 
 		// Hook autosave langsung dari RAM engine Godot saat tidur/save_file dipanggil
+		window.uploadSavePayload = uploadSavePayload;
 		window.onSproutFSSync = function(saveBytes) {
 			console.log('[Sprout Hook] Terdeteksi autosave dari engine Godot!');
 			uploadSavePayload(saveBytes);
@@ -352,7 +353,7 @@
 			if (!uid) return;
 
 			try {
-				const dbReq = indexedDB.open('/userfs');
+				const dbReq = indexedDB.open('/userfs', 21);
 				dbReq.onsuccess = async function(e) {
 					const db = e.target.result;
 					if (!db.objectStoreNames.contains('FILE_DATA')) return;
@@ -397,7 +398,7 @@
 		});
 	</script>
 
-	<script src="index.js"></script>
+	<script src="index.js?v=20261107_v2"></script>
 	<script>
 		window.addEventListener('resize', () => {}, { passive: true });
 
