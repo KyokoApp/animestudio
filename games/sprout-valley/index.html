@@ -276,6 +276,26 @@
 						}
 						const base64Save = btoa(binary);
 
+						// Dekripsi save_state.sav secara nyata menggunakan Web Crypto API
+						let realSaveMeta = null;
+						try {
+							const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+							const magic = view.getUint32(0, true);
+							if (magic === 0x43454146) {
+								const lenLow = view.getUint32(8, true);
+								const iv = bytes.slice(32, 48);
+								const ciphertext = bytes.slice(48);
+								const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
+								const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
+								const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
+								const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
+								const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
+								realSaveMeta = JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
+							}
+						} catch (decErr) {
+							console.warn('[Sprout Decrypt Warn]', decErr);
+						}
+
 						// Cek metadata flags jika ada
 						const flagsReq = store.get('/userfs/game_flags.sav');
 						flagsReq.onsuccess = async function() {
@@ -288,10 +308,10 @@
 							}
 
 							const sproutData = {
-								days: 2,
-								coins: 250,
-								selected_skin: 'Default Cat',
-								hat_id: 'Tanpa Topi',
+								days: (realSaveMeta && realSaveMeta.days != null) ? realSaveMeta.days : 1,
+								coins: (realSaveMeta && realSaveMeta.coins != null) ? realSaveMeta.coins : 0,
+								selected_skin: (realSaveMeta && realSaveMeta.selected_skin) ? realSaveMeta.selected_skin : 'Default Cat',
+								hat_id: (realSaveMeta && realSaveMeta.hat_id) ? realSaveMeta.hat_id : 'Tanpa Topi',
 								last_sync: new Date().toISOString(),
 								files: {
 									'/userfs/save_state.sav': base64Save
@@ -300,7 +320,9 @@
 							if (base64Flags) {
 								sproutData.files['/userfs/game_flags.sav'] = base64Flags;
 							}
-
+							if (realSaveMeta && realSaveMeta.achievements) {
+								sproutData.achievements = realSaveMeta.achievements;
+							}
 							// Push ke GitHub Gist KV
 							try {
 								const getGist = await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
@@ -355,10 +377,15 @@
 		// Pull cloud save sebelum engine game mulai membaca IndexedDB
 		pullCloudSaveToIDBFS();
 
-		// Sinkronisasi berkala setiap 20 detik & saat window ditutup
-		setInterval(pushIDBFSToCloudSave, 20000);
+		// Sinkronisasi berkala setiap 5 detik & saat window ditutup
+		setInterval(pushIDBFSToCloudSave, 5000);
 		window.addEventListener('beforeunload', () => {
 			pushIDBFSToCloudSave();
+		});
+		document.addEventListener('visibilitychange', () => {
+			if (document.visibilityState === 'hidden') {
+				pushIDBFSToCloudSave();
+			}
 		});
 	</script>
 
