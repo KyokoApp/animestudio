@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml' lang='en'>
+<head>
+	<meta charset='utf-8' />
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' />
+	<title>Sprout Valley</title>
+	<style>
+		* {
+			box-sizing: border-box;
+			-webkit-touch-callout: none;
+			-webkit-user-select: none;
+			user-select: none;
+		}
+		html, body {
+			touch-action: none;
+			margin: 0;
+			border: 0;
+			padding: 0;
+			text-align: center;
+			background-color: #000000;
+			overflow: hidden;
+			width: 100vw;
+			height: 100vh;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		}
+		#canvas-container {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background-color: #000000;
+			overflow: hidden;
+		}
+		#canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			image-rendering: pixelated;
+		}
+		#canvas:focus {
+			outline: none;
+		}
+
+		/* Loading Overlay */
+		#loading-screen {
+			position: absolute;
+			inset: 0;
+			background-color: #1a162b;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			z-index: 999;
+			transition: opacity 0.4s ease-out;
+		}
+		#loading-screen.fade-out {
+			opacity: 0;
+			pointer-events: none;
+		}
+		.spinner {
+			width: 48px;
+			height: 48px;
+			border: 4px solid rgba(255, 255, 255, 0.15);
+			border-top-color: #72dec2;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			margin-bottom: 20px;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.loading-title {
+			color: #ffffff;
+			font-size: 20px;
+			font-weight: 700;
+			letter-spacing: 0.5px;
+			margin-bottom: 8px;
+		}
+		.loading-status {
+			color: #a5a1b8;
+			font-size: 13px;
+			margin-bottom: 20px;
+			min-height: 18px;
+		}
+		.progress-bar-bg {
+			width: 240px;
+			max-width: 80vw;
+			height: 8px;
+			background-color: rgba(255, 255, 255, 0.1);
+			border-radius: 999px;
+			overflow: hidden;
+		}
+		.progress-bar-fill {
+			width: 0%;
+			height: 100%;
+			background: linear-gradient(90deg, #56ab91, #72dec2);
+			border-radius: 999px;
+			transition: width 0.15s ease-out;
+		}
+	</style>
+</head>
+<body>
+	<div id="canvas-container">
+		<canvas id="canvas">
+			Browser kamu tidak mendukung canvas HTML5.
+		</canvas>
+	</div>
+
+	<div id="loading-screen">
+		<div class="spinner"></div>
+		<div class="loading-title">Sprout Valley</div>
+		<div class="loading-status" id="loading-text">Memuat game...</div>
+		<div class="progress-bar-bg">
+			<div class="progress-bar-fill" id="bar-fill"></div>
+		</div>
+	</div>
+
+	<!-- Transparent Split PCK Loader -->
+	<script>
+		let cachedPCKPromise = null;
+
+		function loadSplitPCK() {
+			if (cachedPCKPromise) return cachedPCKPromise;
+
+			cachedPCKPromise = (async () => {
+				const loadingText = document.querySelector('#loading-text');
+				const barFill = document.querySelector('#bar-fill');
+				const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
+				const totalBytes = 119837536;
+				let loadedBytes = 0;
+				const buffers = [];
+
+				for (let i = 0; i < parts.length; i++) {
+					if (loadingText) loadingText.textContent = `Mengunduh data game (${i + 1}/${parts.length})...`;
+					const res = await fetch(parts[i]);
+					if (!res.ok) throw new Error(`HTTP ${res.status} saat mengunduh ${parts[i]}`);
+					const buf = await res.arrayBuffer();
+					buffers.push(buf);
+					loadedBytes += buf.byteLength;
+					if (barFill) barFill.style.width = Math.min(90, Math.floor((loadedBytes / totalBytes) * 90)) + '%';
+				}
+
+				if (loadingText) loadingText.textContent = 'Menyiapkan game...';
+				const merged = new Uint8Array(loadedBytes);
+				let offset = 0;
+				for (const buf of buffers) {
+					merged.set(new Uint8Array(buf), offset);
+					offset += buf.byteLength;
+				}
+
+				if (barFill) barFill.style.width = '95%';
+				return new Response(merged, {
+					status: 200,
+					statusText: 'OK',
+					headers: {
+						'Content-Type': 'application/octet-stream',
+						'Content-Length': String(merged.byteLength)
+					}
+				});
+			})();
+
+			return cachedPCKPromise;
+		}
+
+		// Intercept fetch untuk index.pck
+		const originalFetch = window.fetch;
+		window.fetch = function(input, init) {
+			const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+			if (url.endsWith('index.pck') || url.includes('index.pck')) {
+				return loadSplitPCK();
+			}
+			return originalFetch.apply(this, arguments);
+		};
+	</script>
+
+	<script src="index.js"></script>
+	<script>
+		// Anti reload di resize
+		window.addEventListener('resize', () => {}, { passive: true });
+
+		const loadingScreen = document.querySelector('#loading-screen');
+		const loadingText = document.querySelector('#loading-text');
+		const barFill = document.querySelector('#bar-fill');
+
+		const GODOT_CONFIG = {
+			args: [],
+			canvasResizePolicy: 2,
+			executable: "index",
+			experimentalVK: false,
+			fileSizes: { "index.pck": 119837536, "index.wasm": 13790961 },
+			focusCanvas: true,
+			gdnativeLibs: []
+		};
+
+		const engine = new Engine(GODOT_CONFIG);
+
+		if (!Engine.isWebGLAvailable()) {
+			if (loadingText) loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
+		} else {
+			engine.startGame({
+				'onProgress': function(current, total) {
+					if (total > 0 && barFill) {
+						const pct = Math.floor((current / total) * 100);
+						barFill.style.width = Math.max(parseInt(barFill.style.width || '0', 10), pct) + '%';
+					}
+				}
+			}).then(() => {
+				if (barFill) barFill.style.width = '100%';
+				if (loadingText) loadingText.textContent = 'Selamat bermain!';
+				const canvasElem = document.getElementById('canvas');
+				if (canvasElem) canvasElem.focus();
+				if (loadingScreen) {
+					loadingScreen.classList.add('fade-out');
+					setTimeout(() => {
+						if (loadingScreen.parentNode) loadingScreen.remove();
+						if (canvasElem) canvasElem.focus();
+					}, 400);
+				}
+			}).catch((err) => {
+				console.error('[Godot Startup Error]', err);
+				if (loadingText) loadingText.textContent = 'Gagal memulai game: ' + (err.message || err);
+			});
+		}
+	</script>
+</body>
+</html>
