@@ -315,6 +315,70 @@
 			return originalFetch.apply(this, arguments);
 		};
 	</script>
+	<!-- Cloud Save & Discord Activity Identity Sync Hook -->
+	<script>
+		(function() {
+			const SYNC_SERVER_URL = 'https://natsuki.web.id/api/group-activity'; // fallback or local sync bridge
+			const SPROUT_DISCORD_KEY = 'sprout_discord_user_id';
+
+			// Dapatkan User ID Discord dari query params Discord Activity atau simpanan sesi
+			const urlParams = new URLSearchParams(window.location.search);
+			let discordUserId = urlParams.get('user_id') || urlParams.get('discord_id');
+			if (discordUserId) {
+				try { localStorage.setItem(SPROUT_DISCORD_KEY, discordUserId); } catch(e) {}
+			} else {
+				try { discordUserId = localStorage.getItem(SPROUT_DISCORD_KEY); } catch(e) {}
+			}
+
+			// Observasi perubahan save IndexedDB Emscripten (/userfs)
+			window.addEventListener('beforeunload', () => {
+				triggerCloudSaveSync();
+			});
+
+			// Periksa berkala IndexedDB untuk autosave bedtime
+			let lastSyncedTimestamp = 0;
+			async function triggerCloudSaveSync() {
+				const uid = discordUserId || localStorage.getItem(SPROUT_DISCORD_KEY);
+				if (!uid) return;
+				try {
+					const dbReq = indexedDB.open('/userfs');
+					dbReq.onsuccess = function(e) {
+						const db = e.target.result;
+						if (!db.objectStoreNames.contains('FILE_DATA')) return;
+						const tx = db.transaction('FILE_DATA', 'readonly');
+						const store = tx.objectStore('FILE_DATA');
+						const getReq = store.get('/userfs/save_state.sav');
+						getReq.onsuccess = function() {
+							if (!getReq.result || !getReq.result.contents) return;
+							const fileData = getReq.result.contents;
+							const mtime = getReq.result.timestamp || Date.now();
+							if (mtime <= lastSyncedTimestamp) return;
+							lastSyncedTimestamp = mtime;
+							
+							// Payload ringkasan untuk bot Discord
+							const payload = {
+								user_id: uid,
+								last_sync: new Date().toISOString(),
+								save_size: fileData.byteLength || fileData.length
+							};
+							
+							fetch('http://127.0.0.1:4850/api/sprout/save', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(payload),
+								mode: 'cors'
+							}).catch(() => {});
+						};
+					};
+				} catch(err) {
+					console.warn('[Cloud Sync Hook]', err);
+				}
+			}
+
+			// Jalankan polling save checker setiap 30 detik
+			setInterval(triggerCloudSaveSync, 30000);
+		})();
+	</script>
 
 	<script src="index.js"></script>
 	<script>
