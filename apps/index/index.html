@@ -17,33 +17,27 @@
 			border: 0;
 			padding: 0;
 			text-align: center;
-			background-color: #0d1117;
+			background-color: #000000;
 			overflow: hidden;
 			width: 100vw;
 			height: 100vh;
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 		}
-		/* Beri jarak aman di sisi kanan agar seluruh tombol HUD kanan atas & kanan bawah
-		   tidak tertutup oleh tombol bulat X (Exit / PIP) Discord Mobile */
+		/* Area game dibatasi di sisi kanan sejauh 76px agar tidak tertimpa tombol exit Discord */
 		#canvas-container {
 			position: absolute;
 			top: 0;
 			bottom: 0;
 			left: 0;
-			right: max(64px, calc(env(safe-area-inset-right, 0px) + 56px));
+			right: 76px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			background-color: #0d1117;
+			background-color: #000000;
+			overflow: hidden;
 		}
 		#canvas {
 			display: block;
-			width: 100%;
-			height: 100%;
-			object-fit: contain;
-			color: white;
-		}
-		#canvas:focus {
 			outline: none;
 		}
 
@@ -109,6 +103,27 @@
 			Browser tidak mendukung WebGL canvas.
 		</canvas>
 	</div>
+
+	<!-- Hook ukuran window agar engine Godot secara absolut menyisakan ruang tombol exit Discord di sisi kanan -->
+	<script>
+		const SAFE_RIGHT_MARGIN = 76; // Margin aman tombol exit/close Discord Mobile
+		const originalInnerWidthDescriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth') || {
+			get: function() { return window.visualViewport ? window.visualViewport.width : document.documentElement.clientWidth; }
+		};
+
+		// Override innerWidth khusus saat dibaca engine Godot
+		try {
+			Object.defineProperty(window, 'innerWidth', {
+				get: function() {
+					const actual = window.visualViewport ? window.visualViewport.width : (document.documentElement.clientWidth || 800);
+					return Math.max(320, actual - SAFE_RIGHT_MARGIN);
+				},
+				configurable: true
+			});
+		} catch (e) {
+			console.warn('[innerWidth hook warn]', e);
+		}
+	</script>
 
 	<!-- Hook fetch dengan Cache Storage & IndexedDB agar instan saat dibuka ulang -->
 	<script>
