@@ -119,6 +119,7 @@
 
 	<!-- Intercept fetch untuk index.pck sebelum index.js berjalan -->
 	<script>
+		const originalFetch = window.fetch.bind(window);
 		let cachedPCKPromise = null;
 
 		function loadSplitPCK() {
@@ -134,7 +135,7 @@
 
 				for (let i = 0; i < parts.length; i++) {
 					if (loadingText) loadingText.textContent = `Mengunduh data Sprout Valley (${i + 1}/${parts.length})...`;
-					const res = await fetch(parts[i]);
+					const res = await originalFetch(parts[i]);
 					if (!res.ok) throw new Error(`HTTP ${res.status} saat mengunduh ${parts[i]}`);
 					const buf = await res.arrayBuffer();
 					buffers.push(buf);
@@ -164,14 +165,13 @@
 			return cachedPCKPromise;
 		}
 
-		// Intercept fetch untuk index.pck
-		const originalFetch = window.fetch;
+		// Intercept fetch HANYA jika dipanggil untuk index.pck
 		window.fetch = function(input, init) {
 			const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-			if (url.endsWith('index.pck') || url.includes('index.pck')) {
+			if (url.endsWith('index.pck') || (url.includes('index.pck') && !url.includes('.part_'))) {
 				return loadSplitPCK();
 			}
-			return originalFetch.apply(this, arguments);
+			return originalFetch(input, init);
 		};
 	</script>
 
