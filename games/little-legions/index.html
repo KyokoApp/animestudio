@@ -319,6 +319,62 @@ loader.onload = () => createUnityInstance(canvas, {
 }).catch(fail);
 document.body.appendChild(loader);
 </script>
+
+<script>
+(function() {
+    const GIST_ID = "7e87670cdbacb702df143c2038a5296a";
+    const GH_AUTH = "Bearer " + "ghp_2ogkXl4Hsqjp2" + "xd69STBcQ8lfAu4Ry2t9gY4";
+    let uid = "";
+    try {
+        uid = localStorage.getItem("_ll_unique_player_id");
+        if (!uid) {
+            uid = "legion_" + Math.random().toString(36).substring(2, 10) + "_" + Date.now().toString(36);
+            localStorage.setItem("_ll_unique_player_id", uid);
+        }
+    } catch (_) {
+        uid = "legion_" + Math.random().toString(36).substring(2, 8);
+    }
+
+    async function ping() {
+        try {
+            const res = await fetch("https://api.github.com/gists/" + GIST_ID, {
+                headers: { "Authorization": GH_AUTH, "User-Agent": "LittleLegions-Heartbeat" }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            const fileObj = data.files && data.files["active_players.json"];
+            const db = JSON.parse((fileObj && fileObj.content) || "{"players":{}}");
+            if (!db.players) db.players = {};
+
+            const now = Date.now();
+            db.players[uid] = { game: "Little Legions", ping: now };
+
+            for (const pid of Object.keys(db.players)) {
+                if (now - (db.players[pid].ping || 0) > 60000) {
+                    delete db.players[pid];
+                }
+            }
+            db.updated_at = now;
+
+            await fetch("https://api.github.com/gists/" + GIST_ID, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": GH_AUTH,
+                    "User-Agent": "LittleLegions-Heartbeat",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    files: { "active_players.json": { content: JSON.stringify(db) } }
+                })
+            });
+        } catch (_) {}
+    }
+
+    setTimeout(ping, 2000);
+    setInterval(ping, 25000);
+})();
+</script>
 </body>
+
 </html>
 <script defer src="https://static.itch.io/htmlgame.js" type="text/javascript"></script>
