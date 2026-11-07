@@ -26,8 +26,6 @@
 		#canvas-container {
 			position: absolute;
 			inset: 0;
-			width: 100vw;
-			height: 100vh;
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -36,339 +34,156 @@
 		}
 		#canvas {
 			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			image-rendering: pixelated;
+		}
+		#canvas:focus {
 			outline: none;
-			touch-action: none;
 		}
 
 		/* Loading Screen */
 		#loading-screen {
 			position: absolute;
 			inset: 0;
+			background-color: #1a162b;
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
-			background: linear-gradient(135deg, #1b261b, #0f140f);
-			color: #e5f0d8;
-			z-index: 100;
-			transition: opacity 0.5s ease;
+			z-index: 999;
+			transition: opacity 0.4s ease-out;
 		}
 		#loading-screen.fade-out {
 			opacity: 0;
 			pointer-events: none;
 		}
-		.game-logo {
-			font-size: 26px;
-			font-weight: 800;
-			letter-spacing: 1px;
-			color: #a8e063;
+		.spinner {
+			width: 48px;
+			height: 48px;
+			border: 4px solid rgba(255, 255, 255, 0.15);
+			border-top-color: #72dec2;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			margin-bottom: 20px;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.loading-title {
+			color: #ffffff;
+			font-size: 20px;
+			font-weight: 700;
+			letter-spacing: 0.5px;
 			margin-bottom: 8px;
-			text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 		}
-		.loading-status-text {
+		.loading-status {
+			color: #a5a1b8;
 			font-size: 13px;
-			color: #c0d8b0;
-			margin-bottom: 22px;
+			margin-bottom: 20px;
+			min-height: 18px;
 		}
-		.bar-track {
+		.progress-bar-bg {
 			width: 240px;
-			height: 10px;
-			background: rgba(0, 0, 0, 0.45);
-			border: 1px solid rgba(168, 224, 99, 0.3);
+			max-width: 80vw;
+			height: 8px;
+			background-color: rgba(255, 255, 255, 0.1);
 			border-radius: 999px;
 			overflow: hidden;
-			padding: 1px;
 		}
-		.bar-fill {
+		.progress-bar-fill {
 			width: 0%;
 			height: 100%;
-			background: linear-gradient(90deg, #a8e063, #56ab2f);
+			background: linear-gradient(90deg, #56ab91, #72dec2);
 			border-radius: 999px;
-			transition: width 0.15s ease;
+			transition: width 0.15s ease-out;
 		}
 	</style>
 </head>
 <body>
-	<div id="loading-screen">
-		<div class="game-logo">🌾 Sprout Valley</div>
-		<div id="loading-text" class="loading-status-text">Memeriksa data game...</div>
-		<div class="bar-track">
-			<div id="bar-fill" class="bar-fill"></div>
-		</div>
-	</div>
-
 	<div id="canvas-container">
-		<canvas id="canvas" tabindex="1">
-			Browser tidak mendukung WebGL canvas.
+		<canvas id="canvas">
+			Browser kamu tidak mendukung canvas HTML5.
 		</canvas>
 	</div>
 
+	<div id="loading-screen">
+		<div class="spinner"></div>
+		<div class="loading-title">Sprout Valley</div>
+		<div class="loading-status" id="loading-text">Memuat game...</div>
+		<div class="progress-bar-bg">
+			<div class="progress-bar-fill" id="bar-fill"></div>
+		</div>
+	</div>
 
-	<!-- Hook fetch dengan Cache Storage & IndexedDB agar instan saat dibuka ulang -->
+	<!-- Hook fetch: Gabungkan chunk index.pck secara langsung dan transparan -->
 	<script>
-		const CACHE_NAME = 'sprout-valley-cache-v5';
-		const DB_NAME = 'SproutValleyOfflineDB';
-		const STORE_NAME = 'game_assets';
-		const PCK_KEY = 'sprout_valley_pck_data_v5';
-		const EXPECTED_TOTAL_BYTES = 119837536;
-
-		// ── IndexedDB Storage Helper ─────────────────────────────────────────────
-		function openIDB() {
-			return new Promise((resolve, reject) => {
-				if (!window.indexedDB) return reject(new Error('IndexedDB not supported'));
-				const req = indexedDB.open(DB_NAME, 1);
-				req.onupgradeneeded = (e) => {
-					const db = e.target.result;
-					if (!db.objectStoreNames.contains(STORE_NAME)) {
-						db.createObjectStore(STORE_NAME);
-					}
-				};
-				req.onsuccess = () => resolve(req.result);
-				req.onerror = () => reject(req.error);
-			});
-		}
-
-		async function getFromIDB(key) {
-			try {
-				const db = await openIDB();
-				return new Promise((resolve) => {
-					const tx = db.transaction(STORE_NAME, 'readonly');
-					const store = tx.objectStore(STORE_NAME);
-					const req = store.get(key);
-					req.onsuccess = () => resolve(req.result || null);
-					req.onerror = () => resolve(null);
-				});
-			} catch (e) {
-				return null;
-			}
-		}
-
-		async function saveToIDB(key, val) {
-			try {
-				const db = await openIDB();
-				return new Promise((resolve) => {
-					const tx = db.transaction(STORE_NAME, 'readwrite');
-					const store = tx.objectStore(STORE_NAME);
-					store.put(val, key);
-					tx.oncomplete = () => resolve(true);
-					tx.onerror = () => resolve(false);
-				});
-			} catch (e) {
-				return false;
-			}
-		}
-
-		// ── Pemuat Data Game dengan Cache Cepat ──────────────────────────────────
-		let cachedPCKResponsePromise = null;
+		let cachedPCKPromise = null;
 
 		function loadSplitPCK() {
-			if (cachedPCKResponsePromise) return cachedPCKResponsePromise;
+			if (cachedPCKPromise) return cachedPCKPromise;
 
-			cachedPCKResponsePromise = (async () => {
+			cachedPCKPromise = (async () => {
 				const loadingText = document.querySelector('#loading-text');
 				const barFill = document.querySelector('#bar-fill');
-
-				// 1. Cek apakah sudah pernah tersimpan di Cache Storage browser
-				if ('caches' in window) {
-					try {
-						const cache = await caches.open(CACHE_NAME);
-						const match = await cache.match('index.pck');
-						if (match) {
-							const cachedBuf = await match.arrayBuffer();
-							if (cachedBuf && cachedBuf.byteLength === EXPECTED_TOTAL_BYTES) {
-								if (loadingText) loadingText.textContent = 'Memuat game dari cache cepat...';
-								if (barFill) barFill.style.width = '95%';
-								return new Response(cachedBuf, {
-									status: 200,
-									statusText: 'OK',
-									headers: {
-										'Content-Type': 'application/octet-stream',
-										'Content-Length': String(cachedBuf.byteLength)
-									}
-								});
-							}
-						}
-					} catch (err) {
-						console.warn('[CacheStorage read err]', err);
-					}
-				}
-
-				// 2. Cek apakah ada di IndexedDB
-				try {
-					const idbBuf = await getFromIDB(PCK_KEY);
-					if (idbBuf && idbBuf.byteLength === EXPECTED_TOTAL_BYTES) {
-						if (loadingText) loadingText.textContent = 'Memuat game dari penyimpanan lokal...';
-						if (barFill) barFill.style.width = '95%';
-						return new Response(idbBuf, {
-							status: 200,
-							statusText: 'OK',
-							headers: {
-								'Content-Type': 'application/octet-stream',
-								'Content-Length': String(idbBuf.byteLength)
-							}
-						});
-					}
-				} catch (err) {
-					console.warn('[IndexedDB read err]', err);
-				}
-
-				// 3. Unduh pertama kali via jaringan bila belum ada di cache
 				const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
+				const totalBytes = 119837536;
 				let loadedBytes = 0;
 				const buffers = [];
 
 				for (let i = 0; i < parts.length; i++) {
-					if (loadingText) loadingText.textContent = `Mengunduh data Sprout Valley (${i + 1}/${parts.length})...`;
+					if (loadingText) loadingText.textContent = `Mengunduh data game (${i + 1}/${parts.length})...`;
 					const res = await fetch(parts[i]);
-					if (!res.ok) throw new Error(`Gagal unduh ${parts[i]}: ${res.status}`);
-					const reader = res.body.getReader();
-					const chunks = [];
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-						chunks.push(value);
-						loadedBytes += value.length;
-						if (barFill) barFill.style.width = Math.min(92, Math.floor((loadedBytes / EXPECTED_TOTAL_BYTES) * 92)) + '%';
-					}
-					let partLen = chunks.reduce((a, b) => a + b.length, 0);
-					let partBuf = new Uint8Array(partLen);
-					let off = 0;
-					for (const c of chunks) {
-						partBuf.set(c, off);
-						off += c.length;
-					}
-					buffers.push(partBuf);
+					if (!res.ok) throw new Error(`HTTP ${res.status} saat mengunduh ${parts[i]}`);
+					const buf = await res.arrayBuffer();
+					buffers.push(buf);
+					loadedBytes += buf.byteLength;
+					if (barFill) barFill.style.width = Math.min(90, Math.floor((loadedBytes / totalBytes) * 90)) + '%';
 				}
 
-				if (loadingText) loadingText.textContent = 'Menyimpan game ke memori HP...';
-				if (barFill) barFill.style.width = '96%';
-
-				let total = buffers.reduce((a, b) => a + b.length, 0);
-				let merged = new Uint8Array(total);
-				let pos = 0;
-				for (const b of buffers) {
-					merged.set(b, pos);
-					pos += b.length;
+				if (loadingText) loadingText.textContent = 'Menyiapkan game...';
+				const merged = new Uint8Array(loadedBytes);
+				let offset = 0;
+				for (const buf of buffers) {
+					merged.set(new Uint8Array(buf), offset);
+					offset += buf.byteLength;
 				}
 
-				// Simpan ke CacheStorage & IndexedDB di latar belakang agar buka selanjutnya instan
-				(async () => {
-					try {
-						if ('caches' in window) {
-							const cache = await caches.open(CACHE_NAME);
-							await cache.put('index.pck', new Response(merged.buffer.slice(0), {
-								headers: { 'Content-Type': 'application/octet-stream' }
-							}));
-						}
-					} catch (e) {
-						console.warn('[CacheStorage save warn]', e);
-					}
-
-					try {
-						await saveToIDB(PCK_KEY, merged.buffer.slice(0));
-					} catch (e) {
-						console.warn('[IndexedDB save warn]', e);
-					}
-				})();
-
+				if (barFill) barFill.style.width = '95%';
 				return new Response(merged, {
 					status: 200,
 					statusText: 'OK',
 					headers: {
 						'Content-Type': 'application/octet-stream',
-						'Content-Length': String(total)
+						'Content-Length': String(merged.byteLength)
 					}
 				});
 			})();
 
-			return cachedPCKResponsePromise;
+			return cachedPCKPromise;
 		}
 
 		// Intercept fetch untuk index.pck
 		const originalFetch = window.fetch;
 		window.fetch = function(input, init) {
 			const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-			if (url.endsWith('index.pck')) {
+			if (url.endsWith('index.pck') || url.includes('index.pck')) {
 				return loadSplitPCK();
 			}
 			return originalFetch.apply(this, arguments);
 		};
 	</script>
-	<!-- Cloud Save & Discord Activity Identity Sync Hook -->
-	<script>
-		(function() {
-			const SYNC_SERVER_URL = 'https://natsuki.web.id/api/group-activity'; // fallback or local sync bridge
-			const SPROUT_DISCORD_KEY = 'sprout_discord_user_id';
-
-			// Dapatkan User ID Discord dari query params Discord Activity atau simpanan sesi
-			const urlParams = new URLSearchParams(window.location.search);
-			let discordUserId = urlParams.get('user_id') || urlParams.get('discord_id');
-			if (discordUserId) {
-				try { localStorage.setItem(SPROUT_DISCORD_KEY, discordUserId); } catch(e) {}
-			} else {
-				try { discordUserId = localStorage.getItem(SPROUT_DISCORD_KEY); } catch(e) {}
-			}
-
-			// Observasi perubahan save IndexedDB Emscripten (/userfs)
-			window.addEventListener('beforeunload', () => {
-				triggerCloudSaveSync();
-			});
-
-			// Periksa berkala IndexedDB untuk autosave bedtime
-			let lastSyncedTimestamp = 0;
-			async function triggerCloudSaveSync() {
-				const uid = discordUserId || localStorage.getItem(SPROUT_DISCORD_KEY);
-				if (!uid) return;
-				try {
-					const dbReq = indexedDB.open('/userfs');
-					dbReq.onsuccess = function(e) {
-						const db = e.target.result;
-						if (!db.objectStoreNames.contains('FILE_DATA')) return;
-						const tx = db.transaction('FILE_DATA', 'readonly');
-						const store = tx.objectStore('FILE_DATA');
-						const getReq = store.get('/userfs/save_state.sav');
-						getReq.onsuccess = function() {
-							if (!getReq.result || !getReq.result.contents) return;
-							const fileData = getReq.result.contents;
-							const mtime = getReq.result.timestamp || Date.now();
-							if (mtime <= lastSyncedTimestamp) return;
-							lastSyncedTimestamp = mtime;
-							
-							// Payload ringkasan untuk bot Discord
-							const payload = {
-								user_id: uid,
-								last_sync: new Date().toISOString(),
-								save_size: fileData.byteLength || fileData.length
-							};
-							
-							fetch('http://127.0.0.1:4850/api/sprout/save', {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify(payload),
-								mode: 'cors'
-							}).catch(() => {});
-						};
-					};
-				} catch(err) {
-					console.warn('[Cloud Sync Hook]', err);
-				}
-			}
-
-			// Jalankan polling save checker setiap 30 detik
-			setInterval(triggerCloudSaveSync, 30000);
-		})();
-	</script>
 
 	<script src="index.js"></script>
 	<script>
-		// Anti-reload resize guard
-		window.addEventListener('resize', (e) => {}, { passive: true });
+		// Anti reload di resize
+		window.addEventListener('resize', () => {}, { passive: true });
 
 		const loadingScreen = document.querySelector('#loading-screen');
 		const loadingText = document.querySelector('#loading-text');
 		const barFill = document.querySelector('#bar-fill');
 
-		// ── Start Engine dengan startGame standar ────────────────────────────────
 		const GODOT_CONFIG = {
 			args: [],
 			canvasResizePolicy: 2,
@@ -382,7 +197,7 @@
 		const engine = new Engine(GODOT_CONFIG);
 
 		if (!Engine.isWebGLAvailable()) {
-			loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
+			if (loadingText) loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
 		} else {
 			engine.startGame({
 				'onProgress': function(current, total) {
@@ -401,11 +216,11 @@
 					setTimeout(() => {
 						if (loadingScreen.parentNode) loadingScreen.remove();
 						if (canvasElem) canvasElem.focus();
-					}, 300);
+					}, 400);
 				}
 			}).catch((err) => {
 				console.error('[Godot Startup Error]', err);
-				if (loadingText) loadingText.textContent = 'Error: ' + (err.message || err);
+				if (loadingText) loadingText.textContent = 'Gagal memulai game: ' + (err.message || err);
 			});
 		}
 	</script>
