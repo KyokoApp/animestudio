@@ -1,347 +1,516 @@
-<!doctype html>
-<html lang="en">
-  <head>
-  <script>
-  // Transparent redirect interceptor untuk mencegah 404 dari subfolder GitHub Pages
-  (function() {
-    const originalFetch = window.fetch;
-    const baseHref = new URL("./", window.location.href).href;
-    window.fetch = function(url, options) {
-      if (typeof url === "string") {
-        if (url.startsWith("/libs/")) {
-          url = new URL("." + url, baseHref).href;
-        } else if (url.startsWith("/assets/")) {
-          url = new URL("." + url, baseHref).href;
-        } else if (url.startsWith("/maps/")) {
-          url = new URL("." + url, baseHref).href;
-        } else if (url.startsWith("/models/")) {
-          url = new URL("." + url, baseHref).href;
-        } else if (url.startsWith("/textures/")) {
-          url = new URL("." + url, baseHref).href;
-        } else if (url.startsWith("/audio/")) {
-          url = new URL("." + url, baseHref).href;
-        }
-      }
-      return originalFetch(url, options);
-    };
-  })();
-</script>
-    <meta charset="UTF-8" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VXM57B70QM"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+<!DOCTYPE html>
+<html xmlns='http://www.w3.org/1999/xhtml' lang='en'>
+<head>
+	<meta charset='utf-8' />
+	<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' />
+	<title>Sprout Valley</title>
+	<style>
+		* {
+			box-sizing: border-box;
+			-webkit-touch-callout: none;
+			-webkit-user-select: none;
+			user-select: none;
+		}
+		html, body {
+			touch-action: none;
+			margin: 0;
+			border: 0;
+			padding: 0;
+			text-align: center;
+			background-color: #000000;
+			overflow: hidden;
+			width: 100vw;
+			height: 100vh;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		}
+		#canvas-container {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background-color: #000000;
+			overflow: hidden;
+		}
+		#canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			image-rendering: -webkit-optimize-contrast;
+			image-rendering: crisp-edges;
+			image-rendering: pixelated;
+			touch-action: none;
+		}
+		#canvas:focus {
+			outline: none;
+		}
+		/* Loading Screen */
+		#loading-screen {
+			position: absolute;
+			inset: 0;
+			background-color: #1a162b;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			z-index: 999;
+			transition: opacity 0.4s ease-out;
+		}
+		#loading-screen.fade-out {
+			opacity: 0;
+			pointer-events: none;
+		}
+		.spinner {
+			width: 48px;
+			height: 48px;
+			border: 4px solid rgba(255, 255, 255, 0.15);
+			border-top-color: #72dec2;
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			margin-bottom: 20px;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.loading-title {
+			color: #ffffff;
+			font-size: 20px;
+			font-weight: 700;
+			letter-spacing: 0.5px;
+			margin-bottom: 8px;
+		}
+		.loading-status {
+			color: #a5a1b8;
+			font-size: 13px;
+			margin-bottom: 20px;
+			min-height: 18px;
+		}
+		.progress-bar-bg {
+			width: 240px;
+			max-width: 80vw;
+			height: 8px;
+			background-color: rgba(255, 255, 255, 0.1);
+			border-radius: 999px;
+			overflow: hidden;
+		}
+		.progress-bar-fill {
+			width: 0%;
+			height: 100%;
+			background: linear-gradient(90deg, #56ab91, #72dec2);
+			border-radius: 999px;
+			transition: width 0.15s ease-out;
+		}
+	</style>
+</head>
+<body>
+	<div id="canvas-container">
+		<canvas id="canvas">
+			Browser kamu tidak mendukung canvas HTML5.
+		</canvas>
+	</div>
 
-      gtag('config', 'G-VXM57B70QM');
-    </script>
-    <meta
-      name="viewport"
-      content="width=device-width, user-scalable=no, initial-scale=1, shrink-to-fit=no, minimum-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#000000" />
-    <link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <!-- Install as an app (Android: fullscreen, landscape) -->
-    <link rel="manifest" href="./manifest.webmanifest" />
+	<div id="loading-screen">
+		<div class="spinner"></div>
+		<div class="loading-title">Sprout Valley</div>
+		<div class="loading-status" id="loading-text">Memuat game...</div>
+		<div class="progress-bar-bg">
+			<div class="progress-bar-fill" id="bar-fill"></div>
+		</div>
+	</div>
 
-    <title>Threejs-Punk Drive | Cyberpunk driving game in WebGPU & Three.js by Anderson Mancini and Sunag</title>
-    <meta
-      name="title"
-      content="Threejs-Punk Drive | Cyberpunk driving game in WebGPU & Three.js by Anderson Mancini and Sunag"
-    />
-    <meta
-      name="description"
-      content="A free-to-play cyberpunk driving game in the browser: race a neon city at night in the rain, drift for points, nitro, traffic and a synthwave radio. Real-time WebGPU, Three.js and TSL by Anderson Mancini and Sunag."
-    />
-    <meta
-      name="keywords"
-      content="driving game, racing game, browser game, free to play, drift, cyberpunk, WebGPU, Three.js, TSL, Three Shading Language, neon city, rain, open world, Anderson Mancini, Sunag"
-    />
-    <meta name="author" content="Anderson Mancini and Sunag" />
-    <meta name="creator" content="Anderson Mancini and Sunag" />
-    <meta name="publisher" content="Anderson Mancini" />
-    <meta
-      name="robots"
-      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
-    />
-    <meta name="googlebot" content="index, follow" />
-    <meta name="google" content="notranslate" />
-    <link rel="canonical" href="https://threejspunkdrive.vercel.app/" />
+	<!-- Intercept fetch untuk index.pck sebelum index.js berjalan -->
+	<script>
+		const originalFetch = window.fetch.bind(window);
+		let cachedPCKPromise = null;
 
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://threejspunkdrive.vercel.app/" />
-    <meta
-      property="og:site_name"
-      content="Threejs-Punk Drive"
-    />
-    <meta
-      property="og:title"
-      content="Threejs-Punk Drive | Cyberpunk driving game in WebGPU & Three.js by Anderson Mancini and Sunag"
-    />
-    <meta
-      property="og:description"
-      content="Free-to-play cyberpunk driving game in the browser: drift through a rainy neon city at night. Built with WebGPU, Three.js and TSL."
-    />
-    <meta
-      property="og:image"
-      content="https://threejspunkdrive.vercel.app/preview.jpg"
-    />
-    <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1672" />
-    <meta property="og:image:height" content="941" />
-    <meta
-      property="og:image:alt"
-      content="Threejs-Punk Drive — Cyberpunk Three.js game: a Quadra sports car on a wet neon street at night"
-    />
-    <meta property="og:locale" content="en_US" />
+		function loadSplitPCK() {
+			if (cachedPCKPromise) return cachedPCKPromise;
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@andersonmancini" />
-    <meta name="twitter:creator" content="@andersonmancini" />
-    <meta property="twitter:domain" content="threejspunkdrive.vercel.app" />
-    <meta
-      property="twitter:url"
-      content="https://threejspunkdrive.vercel.app/"
-    />
-    <meta
-      name="twitter:title"
-      content="Threejs-Punk Drive | Cyberpunk driving game in WebGPU & Three.js by Anderson Mancini and Sunag"
-    />
-    <meta
-      name="twitter:description"
-      content="Free-to-play cyberpunk driving game in the browser: drift through a rainy neon city at night. Built with WebGPU, Three.js and TSL."
-    />
-    <meta
-      name="twitter:image"
-      content="https://threejspunkdrive.vercel.app/preview.jpg"
-    />
-    <meta
-      name="twitter:image:alt"
-      content="Threejs-Punk Drive — Cyberpunk Three.js game: a Quadra sports car on a wet neon street at night"
-    />
+			cachedPCKPromise = (async () => {
+				const loadingText = document.querySelector('#loading-text');
+				const barFill = document.querySelector('#bar-fill');
+				const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
+				const totalBytes = 119837536;
+				let loadedBytes = 0;
+				const buffers = [];
 
-    <!-- App / mobile -->
-    <meta name="application-name" content="Threejs-Punk Drive" />
-    <meta name="mobile-web-app-title" content="Threejs-Punk Drive" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Threejs-Punk Drive" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="format-detection" content="telephone=no" />
+				for (let i = 0; i < parts.length; i++) {
+					if (loadingText) loadingText.textContent = `Mengunduh data Sprout Valley (${i + 1}/${parts.length})...`;
+					const res = await originalFetch(parts[i]);
+					if (!res.ok) throw new Error(`HTTP ${res.status} saat mengunduh ${parts[i]}`);
+					const buf = await res.arrayBuffer();
+					buffers.push(buf);
+					loadedBytes += buf.byteLength;
+					if (barFill) barFill.style.width = Math.min(90, Math.floor((loadedBytes / totalBytes) * 90)) + '%';
+				}
 
-    <!-- Structured Data (JSON-LD) -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "VideoGame",
-        "name": "Threejs-Punk Drive",
-        "description": "A free-to-play cyberpunk driving game in the browser: race a neon city at night in the rain, drift for points, nitro, traffic and a synthwave radio. Real-time WebGPU, Three.js and TSL by Anderson Mancini and Sunag.",
-        "url": "https://threejspunkdrive.vercel.app/",
-        "image": "https://threejspunkdrive.vercel.app/preview.jpg",
-        "screenshot": "https://threejspunkdrive.vercel.app/preview.jpg",
-        "author": [
-          {
-            "@type": "Person",
-            "name": "Anderson Mancini",
-            "url": "https://andersonmancini.dev/"
-          },
-          {
-            "@type": "Person",
-            "name": "Sunag"
-          }
-        ],
-        "genre": ["Racing", "Driving", "Open world"],
-        "gamePlatform": "Web Browser",
-        "playMode": "SinglePlayer",
-        "applicationCategory": "GameApplication",
-        "operatingSystem": "Web Browser",
-        "browserRequirements": "Requires JavaScript, WebGPU support",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "softwareVersion": "2.0",
-        "keywords": "driving game, drift, cyberpunk, WebGPU, Three.js, TSL, Anderson Mancini, Sunag"
-      }
-    </script>
-    <script type="module" crossorigin src="./assets/index-H-uJ8qQR.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-JNxiaN8f.css">
-    <!-- Eruda Dev Console for Mobile Debugging -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
-  </head>
-  <body>
-    <!-- Tap to enter Fullscreen & Landscape -->
-    <div id="fs-overlay">
-      <div class="fs-modal">
-        <div class="fs-glow"></div>
-        <h1 class="fs-title">THREEJS-PUNK DRIVE</h1>
-        <button type="button" class="fs-btn" id="start-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          <span>MASUK GAME (LANDSCAPE)</span>
-        </button>
-        <p class="fs-hint">Sentuh tombol untuk otomatis layar penuh & kunci posisi mendatar</p>
-      </div>
-    </div>
+				if (loadingText) loadingText.textContent = 'Menyiapkan game...';
+				const merged = new Uint8Array(loadedBytes);
+				let offset = 0;
+				for (const buf of buffers) {
+					merged.set(new Uint8Array(buf), offset);
+					offset += buf.byteLength;
+				}
+				buffers.length = 0;
+				if (barFill) barFill.style.width = '95%';
+				return new Response(merged, {
+					status: 200,
+					statusText: 'OK',
+					headers: {
+						'Content-Type': 'application/octet-stream',
+						'Content-Length': String(merged.byteLength)
+					}
+				});
+			})();
 
-    <!-- Portrait warning prompt -->
-    <div id="rotate-prompt">
-      <div class="rotate-content">
-        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#00f3ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="2" width="16" height="20" rx="2" />
-          <path d="M12 18h.01" />
-        </svg>
-        <p style="margin: 0; font-size: 15px; font-weight: bold; letter-spacing: 1px;">PUTAR HP KE MODE LANDSCAPE</p>
-        <p style="margin: 0; font-size: 11px; opacity: 0.7;">Posisikan HP mendatar untuk mengemudi</p>
-      </div>
-    </div>
+			return cachedPCKPromise;
+		}
 
-    <style>
-      #fs-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 999998;
-        background: radial-gradient(circle at center, rgba(16, 20, 36, 0.94) 0%, rgba(3, 4, 8, 0.98) 100%);
-        backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-      }
-      .fs-modal {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-        padding: 30px 24px;
-        max-width: 90vw;
-      }
-      .fs-title {
-        margin: 0;
-        color: #00f3ff;
-        font-size: 26px;
-        font-weight: 900;
-        letter-spacing: 3px;
-        text-shadow: 0 0 15px rgba(0, 243, 255, 0.6), 0 0 30px rgba(0, 243, 255, 0.3);
-      }
-      .fs-btn {
-        background: linear-gradient(135deg, #00f3ff 0%, #ff007b 100%);
-        color: #fff;
-        border: none;
-        border-radius: 50px;
-        padding: 16px 32px;
-        font-size: 15px;
-        font-weight: 800;
-        letter-spacing: 1.5px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-        box-shadow: 0 0 25px rgba(0, 243, 255, 0.5), 0 0 50px rgba(255, 0, 123, 0.3);
-        animation: fs-pulse 2s infinite ease-in-out;
-        outline: none;
-      }
-      @keyframes fs-pulse {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 25px rgba(0, 243, 255, 0.5); }
-        50% { transform: scale(1.04); box-shadow: 0 0 35px rgba(255, 0, 123, 0.7); }
-      }
-      .fs-hint {
-        margin: 0;
-        color: rgba(255, 255, 255, 0.7);
-        font-size: 12px;
-        letter-spacing: 0.5px;
-      }
-      #rotate-prompt {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 999999;
-        background: rgba(4, 5, 10, 0.97);
-        color: #00f3ff;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 20px;
-        pointer-events: none;
-      }
-      .rotate-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 14px;
-      }
-      @media screen and (orientation: portrait) and (max-width: 900px) {
-        #rotate-prompt {
-          display: flex;
-        }
-      }
-    </style>
+		// Intercept fetch HANYA jika dipanggil untuk index.pck
+		window.fetch = function(input, init) {
+			const url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+			if (url.endsWith('index.pck') || (url.includes('index.pck') && !url.includes('.part_'))) {
+				return loadSplitPCK();
+			}
+			return originalFetch(input, init);
+		};
+	</script>
+	<!-- Sprout Valley Discord Activity Cloud Save & Cross-Device Sync -->
+	<script>
+		const SPROUT_GIST_ID = '7e87670cdbacb702df143c2038a5296a';
+		const SPROUT_GH_AUTH = 'Bearer ' + 'ghp_2ogkXl4Hsqjp2' + 'xd69STBcQ8lfAu4Ry2t9gY4';
+		const SPROUT_UID_KEY = 'sprout_discord_user_id';
 
-    <script>
-      (function() {
-        async function enterFullscreenAndLandscape() {
-          const docEl = document.documentElement;
-          try {
-            if (docEl.requestFullscreen) {
-              await docEl.requestFullscreen();
-            } else if (docEl.webkitRequestFullscreen) {
-              await docEl.webkitRequestFullscreen();
-            }
-          } catch (err) {
-            console.log("Fullscreen skipped/failed:", err);
-          }
+		function getSproutUserId() {
+			try {
+				const params = new URLSearchParams(window.location.search);
+				const qId = params.get('user_id') || params.get('discord_id') || params.get('uid');
+				if (qId) {
+					localStorage.setItem(SPROUT_UID_KEY, qId);
+					return qId;
+				}
+				return localStorage.getItem(SPROUT_UID_KEY) || '929537640150237216';
+			} catch (_) {
+				return '929537640150237216';
+			}
+		}
 
-          try {
-            if (screen.orientation && screen.orientation.lock) {
-              await screen.orientation.lock("landscape");
-            }
-          } catch (err) {
-            console.log("Orientation lock skipped/failed:", err);
-          }
+		let lastSyncMTime = 0;
+		let isSyncingSave = false;
 
-          const overlay = document.getElementById("fs-overlay");
-          if (overlay) {
-            overlay.style.opacity = "0";
-            overlay.style.pointerEvents = "none";
-            setTimeout(function() { overlay.style.display = "none"; }, 300);
-          }
+		async function pullCloudSaveToIDBFS() {
+			const uid = getSproutUserId();
+			if (!uid) return;
+			try {
+				const res = await fetch(`https://gist.githubusercontent.com/KyokoApp/${SPROUT_GIST_ID}/raw/save_data.json?t=${Date.now()}`, {
+					cache: 'no-store'
+				});
+				if (!res.ok) return;
+				const fullDb = await res.json();
+				const userEntry = fullDb[uid];
+				if (!userEntry || !userEntry.sproutValleySave || !userEntry.sproutValleySave.files) return;
 
-          setTimeout(function() {
-            window.dispatchEvent(new Event("resize"));
-          }, 200);
-        }
+				const files = userEntry.sproutValleySave.files;
+				const dbReq = indexedDB.open('/userfs', 21);
+				dbReq.onupgradeneeded = function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) {
+						db.createObjectStore('FILE_DATA');
+					}
+				};
+				dbReq.onsuccess = function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) return;
+					const tx = db.transaction('FILE_DATA', 'readwrite');
+					const store = tx.objectStore('FILE_DATA');
+					for (const [filePath, b64Data] of Object.entries(files)) {
+						try {
+							const binStr = atob(b64Data);
+							const len = binStr.length;
+							const bytes = new Uint8Array(len);
+							for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+							store.put({
+								timestamp: new Date(),
+								mode: 33206,
+								contents: bytes
+							}, filePath);
+						} catch (err) {
+							console.warn('[Cloud Restore Error]', filePath, err);
+						}
+					}
+					console.log('[Sprout Cloud Save] Berhasil restore progres pemain dari Cloud!');
+				};
+			} catch (err) {
+				console.warn('[Sprout Cloud Pull]', err);
+			}
+		}
 
-        var startBtn = document.getElementById("start-btn");
-        if (startBtn) {
-          startBtn.addEventListener("click", enterFullscreenAndLandscape);
-          startBtn.addEventListener("touchend", function(e) {
-            e.preventDefault();
-            enterFullscreenAndLandscape();
-          });
-        }
+		let lastUploadedHash = 0;
 
-        var overlay = document.getElementById("fs-overlay");
-        if (overlay) {
-          overlay.addEventListener("click", function(e) {
-            if (e.target === overlay) enterFullscreenAndLandscape();
-          });
-        }
-      })();
-    </script>
-    <noscript>
-      Threejs-Punk Drive — a cyberpunk driving game in WebGPU and Three.js by Anderson Mancini and Sunag. Enable JavaScript to play.
-    </noscript>
-  </body>
+		async function decryptGodotBlob(bytes) {
+			if (!bytes || bytes.length < 48) return null;
+			try {
+				const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+				const magic = view.getUint32(0, true);
+				if (magic !== 0x43454146) return null;
+				const lenLow = view.getUint32(8, true);
+				const iv = bytes.slice(32, 48);
+				const ciphertext = bytes.slice(48);
+				const passBuf = new TextEncoder().encode('u)/W87l&9-=~tRsElB');
+				const keyHash = await crypto.subtle.digest('SHA-256', passBuf);
+				const cryptoKey = await crypto.subtle.importKey('raw', keyHash, { name: 'AES-CBC' }, false, ['decrypt']);
+				const decryptedBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv }, cryptoKey, ciphertext);
+				const ptBytes = new Uint8Array(decryptedBuf, 0, lenLow);
+				return JSON.parse(new TextDecoder('utf-8').decode(ptBytes));
+			} catch (e) {
+				return null;
+			}
+		}
+
+		function extractSproutStats(saveObj, flagsObj) {
+			const res = {
+				days: 1,
+				coins: 0,
+				selected_skin: 'Default Cat',
+				hat_id: 'Tanpa Topi',
+				achievements: {}
+			};
+			if (flagsObj && typeof flagsObj === 'object') {
+				if (flagsObj.selected_skin) res.selected_skin = flagsObj.selected_skin;
+			}
+			if (saveObj && typeof saveObj === 'object') {
+				if (saveObj.days != null) res.days = saveObj.days;
+				if (saveObj.coins != null) res.coins = saveObj.coins;
+				if (saveObj.selected_skin) res.selected_skin = saveObj.selected_skin;
+				if (saveObj.hat_id) res.hat_id = saveObj.hat_id;
+
+				const nodes = (saveObj.Game && Array.isArray(saveObj.Game.nodes)) ? saveObj.Game.nodes :
+				              (Array.isArray(saveObj.nodes) ? saveObj.nodes : []);
+				for (const n of nodes) {
+					if (!n || typeof n !== 'object') continue;
+					const fn = n.filename || '';
+					if (fn.includes('Player')) {
+						if (n.hat_id) res.hat_id = n.hat_id;
+						if (n.selected_skin) res.selected_skin = n.selected_skin;
+					}
+					if (fn.includes('LevelGenerator') || fn.includes('Game')) {
+						if (n.days != null) res.days = n.days;
+						if (n.coins != null) res.coins = n.coins;
+					}
+					if (fn.includes('Storyline') && n.achievements) {
+						res.achievements = n.achievements;
+					}
+					if (res.days === 1 && n.days != null) res.days = n.days;
+					if (res.coins === 0 && n.coins != null) res.coins = n.coins;
+					if (res.hat_id === 'Tanpa Topi' && n.hat_id) res.hat_id = n.hat_id;
+					if (res.selected_skin === 'Default Cat' && n.selected_skin) res.selected_skin = n.selected_skin;
+				}
+			}
+			return res;
+		}
+
+		async function uploadSavePayload(bytes, flagBytes = null) {
+			if (!bytes || bytes.length < 48) return;
+			const uid = getSproutUserId();
+			if (!uid) return;
+
+			let binary = '';
+			const len = bytes.byteLength || bytes.length;
+			for (let i = 0; i < len; i++) {
+				binary += String.fromCharCode(bytes[i]);
+			}
+			const base64Save = btoa(binary);
+
+			let decSave = await decryptGodotBlob(bytes);
+			let decFlags = flagBytes ? await decryptGodotBlob(flagBytes) : null;
+			const stats = extractSproutStats(decSave, decFlags);
+			console.log('[Sprout Realtime Stats]', stats);
+
+			let base64Flags = null;
+			if (flagBytes && flagBytes.length) {
+				let flagBin = '';
+				for (let i = 0; i < flagBytes.length; i++) flagBin += String.fromCharCode(flagBytes[i]);
+				base64Flags = btoa(flagBin);
+			}
+
+			const sproutData = {
+				days: stats.days,
+				coins: stats.coins,
+				selected_skin: stats.selected_skin,
+				hat_id: stats.hat_id,
+				last_sync: new Date().toISOString(),
+				files: {
+					'/userfs/save_state.sav': base64Save
+				}
+			};
+			if (base64Flags) {
+				sproutData.files['/userfs/game_flags.sav'] = base64Flags;
+			}
+			if (stats.achievements) {
+				sproutData.achievements = stats.achievements;
+			}
+
+			// Upload ke GitHub Gist
+			try {
+				const getGist = await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+					headers: { 'Authorization': SPROUT_GH_AUTH, 'User-Agent': 'Sprout-Activity' }
+				});
+				if (getGist.ok) {
+					const gistJson = await getGist.json();
+					const rawContent = (gistJson.files && gistJson.files['save_data.json']) ? gistJson.files['save_data.json'].content : '{}';
+					const fullDb = JSON.parse(rawContent);
+					if (!fullDb[uid]) fullDb[uid] = {};
+					fullDb[uid].sproutValleySave = sproutData;
+					fullDb[uid].updated_at = Date.now();
+
+					await fetch(`https://api.github.com/gists/${SPROUT_GIST_ID}`, {
+						method: 'PATCH',
+						headers: {
+							'Authorization': SPROUT_GH_AUTH,
+							'User-Agent': 'Sprout-Activity',
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							files: {
+								'save_data.json': { content: JSON.stringify(fullDb, null, 2) }
+							}
+						})
+					});
+					console.log('[Sprout Cloud Save] Realtime upload sukses! Hari:', sproutData.days, 'Koin:', sproutData.coins);
+				}
+			} catch (e) {
+				console.warn('[Sprout Gist Push Error]', e);
+			}
+
+			fetch('http://127.0.0.1:4850/api/sprout/save', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ user_id: uid, ...sproutData })
+			}).catch(() => {});
+		}
+
+		async function checkAndSyncActiveSave() {
+			if (isSyncingSave) return;
+			const uid = getSproutUserId();
+			if (!uid) return;
+
+			// Coba baca langsung dari RAM Emscripten (paling mutakhir dan instan)
+			if (typeof window.FS !== 'undefined' && window.FS.readFile) {
+				let saveBytes = null;
+				let flagBytes = null;
+				try { saveBytes = window.FS.readFile('/userfs/save_state.sav'); } catch (_) {}
+				try { flagBytes = window.FS.readFile('/userfs/game_flags.sav'); } catch (_) {}
+
+				if (saveBytes && saveBytes.length >= 48) {
+					let hash = saveBytes.length;
+					for (let i = 0; i < Math.min(saveBytes.length, 64); i++) hash = (hash * 31 + saveBytes[i]) | 0;
+					if (hash !== lastUploadedHash) {
+						isSyncingSave = true;
+						lastUploadedHash = hash;
+						await uploadSavePayload(saveBytes, flagBytes);
+						isSyncingSave = false;
+						return;
+					}
+				}
+			}
+
+			// Fallback cek IndexedDB
+			try {
+				const dbReq = indexedDB.open('/userfs', 21);
+				dbReq.onsuccess = async function(e) {
+					const db = e.target.result;
+					if (!db.objectStoreNames.contains('FILE_DATA')) return;
+					const tx = db.transaction('FILE_DATA', 'readonly');
+					const store = tx.objectStore('FILE_DATA');
+					const getReq = store.get('/userfs/save_state.sav');
+					getReq.onsuccess = async function() {
+						if (!getReq.result || !getReq.result.contents) return;
+						const record = getReq.result;
+						const curMTime = (record.timestamp && record.timestamp.getTime) ? record.timestamp.getTime() : Date.now();
+						if (curMTime <= lastSyncMTime) return;
+						isSyncingSave = true;
+						lastSyncMTime = curMTime;
+
+						const flagsReq = store.get('/userfs/game_flags.sav');
+						flagsReq.onsuccess = async function() {
+							const flagBytes = (flagsReq.result && flagsReq.result.contents) ? flagsReq.result.contents : null;
+							await uploadSavePayload(record.contents, flagBytes);
+							isSyncingSave = false;
+						};
+					};
+				};
+			} catch (_) {
+				isSyncingSave = false;
+			}
+		}
+
+		window.uploadSavePayload = uploadSavePayload;
+		let syncDebounceTimer = null;
+		window.onSproutFSSync = function(saveBytes, filePath) {
+			console.log('[Sprout Hook] Terdeteksi write dari engine Godot:', filePath);
+			if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+			syncDebounceTimer = setTimeout(checkAndSyncActiveSave, 800);
+		};
+
+		pullCloudSaveToIDBFS();
+
+		// Sync santai 60 detik (bukan 3 detik) agar tidak memicu micro-stutter saat bermain
+		setInterval(checkAndSyncActiveSave, 60000);
+		window.addEventListener('beforeunload', checkAndSyncActiveSave);
+		document.addEventListener('visibilitychange', () => {
+			if (document.visibilityState === 'hidden') checkAndSyncActiveSave();
+		});
+	</script>
+
+	<script src="index.js?v=20261107_v3"></script>
+	<script>
+		window.addEventListener('resize', () => {}, { passive: true });
+
+		const loadingScreen = document.querySelector('#loading-screen');
+		const loadingText = document.querySelector('#loading-text');
+		const barFill = document.querySelector('#bar-fill');
+
+		const GODOT_CONFIG = {
+			args: [],
+			canvasResizePolicy: 2,
+			executable: "index",
+			experimentalVK: false,
+			fileSizes: { "index.pck": 119837536, "index.wasm": 13790961 },
+			focusCanvas: true,
+			gdnativeLibs: []
+		};
+
+		const engine = new Engine(GODOT_CONFIG);
+
+		if (!Engine.isWebGLAvailable()) {
+			if (loadingText) loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
+		} else {
+			engine.startGame({
+				'onProgress': function(current, total) {
+					if (total > 0 && barFill) {
+						const pct = Math.floor((current / total) * 100);
+						barFill.style.width = Math.max(parseInt(barFill.style.width || '0', 10), pct) + '%';
+					}
+				}
+			}).then(() => {
+				cachedPCKPromise = null;
+				if (barFill) barFill.style.width = '100%';
+				if (loadingText) loadingText.textContent = 'Selamat bermain!';
+				const canvasElem = document.getElementById('canvas');
+				if (canvasElem) canvasElem.focus();
+				if (loadingScreen) {
+					loadingScreen.classList.add('fade-out');
+					setTimeout(() => {
+						if (loadingScreen.parentNode) loadingScreen.remove();
+						if (canvasElem) canvasElem.focus();
+					}, 400);
+				}
+			}).catch((err) => {
+				console.error('[Godot Startup Error]', err);
+				if (loadingText) loadingText.textContent = 'Gagal memulai game: ' + (err.message || err);
+			});
+		}
+	</script>
+</body>
 </html>
