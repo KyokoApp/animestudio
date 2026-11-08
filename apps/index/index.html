@@ -124,6 +124,19 @@
 		const originalFetch = window.fetch.bind(window);
 		let cachedPCKPromise = null;
 
+		async function fetchPartWithRetry(url, retries = 3) {
+			for (let attempt = 1; attempt <= retries; attempt++) {
+				try {
+					const res = await originalFetch(url);
+					if (!res.ok) throw new Error(`HTTP ${res.status}`);
+					return res;
+				} catch (err) {
+					if (attempt === retries) throw err;
+					await new Promise(r => setTimeout(r, 1000 * attempt));
+				}
+			}
+		}
+
 		function loadSplitPCK() {
 			if (cachedPCKPromise) return cachedPCKPromise;
 
@@ -132,36 +145,72 @@
 				const barFill = document.querySelector('#bar-fill');
 				const parts = ['index.pck.part_aa', 'index.pck.part_ab', 'index.pck.part_ac'];
 				const totalBytes = 119837536;
-				let loadedBytes = 0;
-				const buffers = [];
-
-				for (let i = 0; i < parts.length; i++) {
-					if (loadingText) loadingText.textContent = `Mengunduh data Sprout Valley (${i + 1}/${parts.length})...`;
-					const res = await originalFetch(parts[i]);
-					if (!res.ok) throw new Error(`HTTP ${res.status} saat mengunduh ${parts[i]}`);
-					const buf = await res.arrayBuffer();
-					buffers.push(buf);
-					loadedBytes += buf.byteLength;
-					if (barFill) barFill.style.width = Math.min(90, Math.floor((loadedBytes / totalBytes) * 90)) + '%';
-				}
-
-				if (loadingText) loadingText.textContent = 'Menyiapkan game...';
-				const merged = new Uint8Array(loadedBytes);
+				const baseDir = new URL('.', window.location.href).href;
+				const merged = new Uint8Array(totalBytes);
 				let offset = 0;
-				for (const buf of buffers) {
-					merged.set(new Uint8Array(buf), offset);
-					offset += buf.byteLength;
-				}
-				buffers.length = 0;
-				if (barFill) barFill.style.width = '95%';
-				return new Response(merged, {
-					status: 200,
-					statusText: 'OK',
-					headers: {
-						'Content-Type': 'application/octet-stream',
-						'Content-Length': String(merged.byteLength)
+
+				let cache = null;
+				try {
+					if ('caches' in window) {
+						cache = await caches.open('sprout-pck-v1');
 					}
-				});
+				} catch (e) {
+					console.warn('CacheStorage tidak tersedia:', e);
+				}
+
+				try {
+					for (let i = 0; i < parts.length; i++) {
+						const partUrl = new URL(parts[i], baseDir).href;
+						let res = null;
+
+						if (cache) {
+							try {
+								res = await cache.match(partUrl);
+							} catch (e) {}
+						}
+
+						if (!res) {
+							res = await fetchPartWithRetry(partUrl, 3);
+							if (cache) {
+								try {
+									cache.put(partUrl, res.clone());
+								} catch (e) {}
+							}
+						}
+
+						const reader = res.body.getReader();
+						while (true) {
+							const { done, value } = await reader.read();
+							if (done) break;
+							merged.set(value, offset);
+							offset += value.length;
+
+							const pct = Math.min(95, Math.floor((offset / totalBytes) * 95));
+							const mbLoaded = (offset / (1024 * 1024)).toFixed(1);
+							const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1);
+							if (barFill) barFill.style.width = pct + '%';
+							if (loadingText) {
+								loadingText.textContent = `Mengunduh (${i + 1}/${parts.length}): ${mbLoaded} / ${mbTotal} MB (${pct}%)`;
+							}
+						}
+					}
+
+					if (loadingText) loadingText.textContent = 'Menyiapkan game...';
+					if (barFill) barFill.style.width = '98%';
+
+					return new Response(merged.buffer, {
+						status: 200,
+						statusText: 'OK',
+						headers: {
+							'Content-Type': 'application/octet-stream',
+							'Content-Length': String(merged.byteLength)
+						}
+					});
+				} catch (err) {
+					cachedPCKPromise = null;
+					if (loadingText) loadingText.textContent = 'Gagal memuat: ' + err.message + ' (Muat ulang halaman)';
+					throw err;
+				}
 			})();
 
 			return cachedPCKPromise;
