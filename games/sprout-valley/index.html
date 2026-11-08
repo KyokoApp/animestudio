@@ -195,10 +195,17 @@
 						}
 					}
 
-					if (loadingText) loadingText.textContent = 'Menyiapkan game...';
-					if (barFill) barFill.style.width = '98%';
+					if (loadingText) loadingText.textContent = 'Memuat engine Godot...';
+					if (barFill) barFill.style.width = '96%';
 
-					return new Response(merged.buffer, {
+					const singleStream = new ReadableStream({
+						start(controller) {
+							controller.enqueue(merged);
+							controller.close();
+						}
+					});
+
+					return new Response(singleStream, {
 						status: 200,
 						statusText: 'OK',
 						headers: {
@@ -535,6 +542,24 @@
 		if (!Engine.isWebGLAvailable()) {
 			if (loadingText) loadingText.textContent = 'Browser kamu belum mendukung WebGL.';
 		} else {
+			let stageTimer = null;
+			const stages = [
+				'Memuat engine & data...',
+				'Kompilasi shader WebGL...',
+				'Menyiapkan pulau Sprout Valley...',
+				'Membuka game...'
+			];
+			let stageIdx = 0;
+			if (loadingText) loadingText.textContent = stages[0];
+			stageTimer = setInterval(() => {
+				stageIdx = (stageIdx + 1) % stages.length;
+				if (loadingText) loadingText.textContent = stages[stageIdx];
+				if (barFill) {
+					const cur = parseInt(barFill.style.width || '96', 10);
+					if (cur < 99) barFill.style.width = (cur + 1) + '%';
+				}
+			}, 1800);
+
 			engine.startGame({
 				'onProgress': function(current, total) {
 					if (total > 0 && barFill) {
@@ -543,6 +568,7 @@
 					}
 				}
 			}).then(() => {
+				if (stageTimer) clearInterval(stageTimer);
 				cachedPCKPromise = null;
 				if (barFill) barFill.style.width = '100%';
 				if (loadingText) loadingText.textContent = 'Selamat bermain!';
@@ -556,6 +582,7 @@
 					}, 400);
 				}
 			}).catch((err) => {
+				if (stageTimer) clearInterval(stageTimer);
 				console.error('[Godot Startup Error]', err);
 				if (loadingText) loadingText.textContent = 'Gagal memulai game: ' + (err.message || err);
 			});
