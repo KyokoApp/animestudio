@@ -317,11 +317,33 @@
             overlay.style.pointerEvents = "none";
             setTimeout(function() { overlay.style.display = "none"; }, 300);
           }
-
-          setTimeout(function() {
+          function triggerSync() {
             window.dispatchEvent(new Event("resize"));
-          }, 200);
+          }
+
+          // Multi-stage trigger to ensure landscape dimensions are locked cleanly
+          [50, 150, 300, 500, 800, 1200, 1800].forEach(function(delay) {
+            setTimeout(triggerSync, delay);
+          });
         }
+
+        function triggerSync() {
+          window.dispatchEvent(new Event("resize"));
+        }
+
+        window.addEventListener("orientationchange", function() {
+          [100, 300, 600, 1000].forEach(function(d) { setTimeout(triggerSync, d); });
+        });
+
+        if (screen.orientation) {
+          screen.orientation.addEventListener("change", function() {
+            [100, 300, 600, 1000].forEach(function(d) { setTimeout(triggerSync, d); });
+          });
+        }
+
+        document.addEventListener("fullscreenchange", function() {
+          [100, 300, 600, 1000].forEach(function(d) { setTimeout(triggerSync, d); });
+        });
 
         var startBtn = document.getElementById("start-btn");
         if (startBtn) {
