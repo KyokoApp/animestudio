@@ -1,6 +1,31 @@
 <!doctype html>
 <html lang="en">
   <head>
+  <script>
+  // Transparent redirect interceptor untuk mencegah 404 dari subfolder GitHub Pages
+  (function() {
+    const originalFetch = window.fetch;
+    const baseHref = new URL("./", window.location.href).href;
+    window.fetch = function(url, options) {
+      if (typeof url === "string") {
+        if (url.startsWith("/libs/")) {
+          url = new URL("." + url, baseHref).href;
+        } else if (url.startsWith("/assets/")) {
+          url = new URL("." + url, baseHref).href;
+        } else if (url.startsWith("/maps/")) {
+          url = new URL("." + url, baseHref).href;
+        } else if (url.startsWith("/models/")) {
+          url = new URL("." + url, baseHref).href;
+        } else if (url.startsWith("/textures/")) {
+          url = new URL("." + url, baseHref).href;
+        } else if (url.startsWith("/audio/")) {
+          url = new URL("." + url, baseHref).href;
+        }
+      }
+      return originalFetch(url, options);
+    };
+  })();
+</script>
     <meta charset="UTF-8" />
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-VXM57B70QM"></script>
