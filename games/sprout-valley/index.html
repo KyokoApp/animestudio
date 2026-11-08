@@ -37,12 +37,14 @@
 			width: 100%;
 			height: 100%;
 			object-fit: contain;
+			image-rendering: -webkit-optimize-contrast;
+			image-rendering: crisp-edges;
 			image-rendering: pixelated;
+			touch-action: none;
 		}
 		#canvas:focus {
 			outline: none;
 		}
-
 		/* Loading Screen */
 		#loading-screen {
 			position: absolute;
@@ -150,7 +152,7 @@
 					merged.set(new Uint8Array(buf), offset);
 					offset += buf.byteLength;
 				}
-
+				buffers.length = 0;
 				if (barFill) barFill.style.width = '95%';
 				return new Response(merged, {
 					status: 200,
@@ -444,15 +446,17 @@
 		}
 
 		window.uploadSavePayload = uploadSavePayload;
+		let syncDebounceTimer = null;
 		window.onSproutFSSync = function(saveBytes, filePath) {
 			console.log('[Sprout Hook] Terdeteksi write dari engine Godot:', filePath);
-			checkAndSyncActiveSave();
+			if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+			syncDebounceTimer = setTimeout(checkAndSyncActiveSave, 800);
 		};
 
 		pullCloudSaveToIDBFS();
 
-		// Polling aktif RAM memory & IndexedDB setiap 3 detik
-		setInterval(checkAndSyncActiveSave, 3000);
+		// Sync santai 60 detik (bukan 3 detik) agar tidak memicu micro-stutter saat bermain
+		setInterval(checkAndSyncActiveSave, 60000);
 		window.addEventListener('beforeunload', checkAndSyncActiveSave);
 		document.addEventListener('visibilitychange', () => {
 			if (document.visibilityState === 'hidden') checkAndSyncActiveSave();
@@ -490,6 +494,7 @@
 					}
 				}
 			}).then(() => {
+				cachedPCKPromise = null;
 				if (barFill) barFill.style.width = '100%';
 				if (loadingText) loadingText.textContent = 'Selamat bermain!';
 				const canvasElem = document.getElementById('canvas');
