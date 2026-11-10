@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>WA Web Remote</title>
+<style>
+  :root {
+    --bg: #0b141a;
+    --panel: #111b21;
+    --panel2: #202c33;
+    --border: #2a3942;
+    --text: #e9edef;
+    --muted: #8696a0;
+    --accent: #00a884;
+    --accent-hover: #06cf9c;
+    --danger: #f15c6d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  #auth-screen {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%; padding: 20px;
+  }
+  .card {
+    width: 100%; max-width: 390px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px; box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 19px; font-weight: 700; margin-bottom: 6px;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent); display: inline-block;
+  }
+  .sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+  input[type="password"], input[type="url"], input[type="text"] {
+    width: 100%; padding: 11px 12px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--panel2);
+    color: var(--text); font-size: 14px; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .row-check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted); margin-top: 12px; cursor: pointer;
+  }
+  button.primary {
+    width: 100%; margin-top: 16px; padding: 12px; border: 0;
+    border-radius: 9px; background: var(--accent); color: #051b14;
+    font-weight: 700; font-size: 15px; cursor: pointer;
+  }
+  button.primary:hover { background: var(--accent-hover); }
+  button.primary:disabled { opacity: 0.55; cursor: not-allowed; }
+  .err { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 18px; }
+  .meta-line { font-size: 11px; color: var(--muted); margin-top: 10px; word-break: break-all; }
+
+  #app-screen {
+    display: none; flex-direction: column; width: 100%; height: 100dvh;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 8px 10px; background: var(--panel);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .status-pill {
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    color: var(--text); white-space: nowrap;
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+  .status-dot.on { background: var(--accent); }
+  .status-dot.off { background: var(--danger); }
+  .actions { display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+  .btn {
+    padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); font-size: 12px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn.active { border-color: var(--accent); color: var(--accent); }
+  .btn.danger { border-color: #5c2831; color: #ff8a98; }
+
+  .stage {
+    position: relative; flex: 1; overflow: auto;
+    background: #070d11; display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+  }
+  .stage.panning { overflow: auto; touch-action: pan-x pan-y; justify-content: flex-start; align-items: flex-start; }
+  #screen {
+    display: block; max-width: 100%; max-height: 100%;
+    cursor: crosshair; user-select: none; -webkit-user-select: none;
+  }
+  .stage.zoomed #screen {
+    max-width: none; max-height: none;
+  }
+  .hint-toast {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    background: rgba(17,27,33,0.92); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px;
+    color: var(--muted); pointer-events: none; opacity: 0; transition: opacity .2s;
+  }
+  .hint-toast.show { opacity: 1; }
+
+  .bottombar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: var(--panel); border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  #text-input {
+    flex: 1; padding: 9px 11px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel2);
+    color: var(--text); font-size: 14px; outline: none;
+  }
+  #text-input:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="card">
+    <div class="brand"><span class="dot"></span> WA Web Remote</div>
+    <div class="sub">Akses browser WhatsApp Web dari perangkat mana saja lewat koneksi terenkripsi.</div>
+
+    <div id="endpoint-wrap">
+      <label for="endpoint-input">Server Endpoint (HTTPS)</label>
+      <input id="endpoint-input" type="url" placeholder="https://....trycloudflare.com">
+    </div>
+
+    <label for="pass-input">Password Akses</label>
+    <input id="pass-input" type="password" placeholder="Masukkan password..." autocomplete="current-password">
+
+    <label class="row-check">
+      <input id="remember-chk" type="checkbox" checked> Simpan sesi di perangkat ini
+    </label>
+
+    <button id="login-btn" class="primary">Masuk</button>
+    <div id="auth-err" class="err"></div>
+    <div id="endpoint-meta" class="meta-line"></div>
+  </div>
+</div>
+
+<div id="app-screen">
+  <div class="topbar">
+    <div class="status-pill">
+      <span id="ws-dot" class="status-dot"></span>
+      <span id="ws-label">Connecting...</span>
+    </div>
+    <div class="actions">
+      <button id="btn-zoom" class="btn">Zoom 1x</button>
+      <button id="btn-mode" class="btn">Tap: Klik</button>
+      <button id="btn-reload" class="btn">↻ WA</button>
+      <button id="btn-logout" class="btn danger">Keluar</button>
+    </div>
+  </div>
+
+  <div id="stage" class="stage">
+    <canvas id="screen" width="1280" height="800"></canvas>
+    <div id="toast" class="hint-toast"></div>
+  </div>
+
+  <form id="type-form" class="bottombar">
+    <input id="text-input" type="text" placeholder="Ketik teks ke fokus kursor WA..." autocomplete="off">
+    <button type="submit" class="btn active">Kirim</button>
+    <button type="button" id="btn-bksp" class="btn">⌫</button>
+    <button type="button" id="btn-enter" class="btn">↵</button>
+    <button type="button" id="btn-esc" class="btn">Esc</button>
+  </form>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const authScreen = $('auth-screen');
+  const appScreen = $('app-screen');
+  const endpointInput = $('endpoint-input');
+  const endpointWrap = $('endpoint-wrap');
+  const endpointMeta = $('endpoint-meta');
+  const passInput = $('pass-input');
+  const rememberChk = $('remember-chk');
+  const loginBtn = $('login-btn');
+  const authErr = $('auth-err');
+  const wsDot = $('ws-dot');
+  const wsLabel = $('ws-label');
+  const stage = $('stage');
+  const canvas = $('screen');
+  const ctx = canvas.getContext('2d');
+  const toast = $('toast');
+  const btnZoom = $('btn-zoom');
+  const btnMode = $('btn-mode');
+
+  let ws = null;
+  let token = '';
+  let endpoint = '';
+  let remoteW = 1280;
+  let remoteH = 800;
+  let zoomLevel = 1; // 1 = fit, 1.75 = zoomed
+  let panMode = false;
+  let reconnectTimer = null;
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  function normalizeEndpoint(raw) {
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+
+  async function resolveInitialEndpoint() {
+    const params = new URLSearchParams(location.search);
+    const paramEp = params.get('api');
+    if (paramEp) {
+      endpoint = normalizeEndpoint(paramEp);
+      endpointInput.value = endpoint;
+      endpointMeta.textContent = 'Endpoint dari URL parameter.';
+      return;
+    }
+
+    if (!location.hostname.endsWith('github.io') && location.protocol.startsWith('http')) {
+      endpoint = location.origin;
+      endpointInput.value = endpoint;
+      endpointWrap.style.display = 'none';
+      endpointMeta.textContent = 'Mode langsung: ' + endpoint;
+      return;
+    }
+
+    // Hosted di GitHub Pages -> ambil tunnel.json terbaru
+    endpointMeta.textContent = 'Memuat endpoint aktif dari tunnel.json...';
+    try {
+      const r = await fetch('./tunnel.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.url) {
+          endpoint = normalizeEndpoint(d.url);
+          endpointInput.value = endpoint;
+          endpointMeta.textContent = 'Endpoint aktif: ' + endpoint + (d.updatedAt ? ' (' + new Date(d.updatedAt).toLocaleTimeString() + ')' : '');
+          return;
+        }
+      }
+    } catch {}
+
+    const saved = localStorage.getItem('wa_remote_ep') || '';
+    endpointInput.value = saved;
+    endpointMeta.textContent = saved ? 'Memakai endpoint tersimpan.' : 'Masukkan URL tunnel aktif jika belum otomatis.';
+  }
+
+  async function doLogin(pw, epOverride) {
+    authErr.textContent = '';
+    const ep = normalizeEndpoint(epOverride || endpointInput.value || endpoint);
+    if (!ep) { authErr.textContent = 'Endpoint server belum diisi.'; return; }
+
+    loginBtn.disabled = true;
+    try {
+      const res = await fetch(ep + '/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok || !data.token) {
+        authErr.textContent = data.error || ('Login gagal (HTTP ' + res.status + ')');
+        return;
+      }
+      endpoint = ep;
+      token = data.token;
+      if (rememberChk.checked) {
+        localStorage.setItem('wa_remote_ep', endpoint);
+        localStorage.setItem('wa_remote_token', token);
+      } else {
+        localStorage.removeItem('wa_remote_token');
+      }
+      enterApp();
+    } catch (e) {
+      authErr.textContent = 'Gagal terhubung ke server: ' + (e.message || 'Network error');
+    } finally {
+      loginBtn.disabled = false;
+    }
+  }
+
+  function enterApp() {
+    authScreen.style.display = 'none';
+    appScreen.style.display = 'flex';
+    connectWS();
+  }
+
+  function leaveApp(msg) {
+    clearTimeout(reconnectTimer);
+    if (ws) { try { ws.close(); } catch {} ws = null; }
+    token = '';
+    localStorage.removeItem('wa_remote_token');
+    appScreen.style.display = 'none';
+    authScreen.style.display = 'flex';
+    if (msg) authErr.textContent = msg;
+  }
+
+  function connectWS() {
+    if (!endpoint || !token) return;
+    if (ws) { try { ws.close(); } catch {} }
+    clearTimeout(reconnectTimer);
+
+    wsDot.className = 'status-dot';
+    wsLabel.textContent = 'Connecting...';
+
+    const wsUrl = endpoint.replace(/^http/i, 'ws') + '/ws?token=' + encodeURIComponent(token);
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      wsDot.className = 'status-dot on';
+      wsLabel.textContent = 'Live';
+      sendCmd({ type: 'ping' });
+    };
+
+    ws.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+      if (msg.type === 'frame' && msg.data) {
+        if (msg.w && msg.h && (msg.w !== remoteW || msg.h !== remoteH)) {
+          remoteW = msg.w;
+          remoteH = msg.h;
+          canvas.width = remoteW;
+          canvas.height = remoteH;
+          applyZoom();
+        }
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        img.src = 'data:image/jpeg;base64,' + msg.data;
+      } else if (msg.type === 'status') {
+        wsLabel.textContent = msg.text || 'Live';
+      } else if (msg.type === 'error' && msg.fatal) {
+        leaveApp(msg.error || 'Sesi berakhir');
+      }
+    };
+
+    ws.onclose = (ev) => {
+      wsDot.className = 'status-dot off';
+      if (ev.code === 4001) {
+        leaveApp('Sesi/password tidak valid. Silakan login ulang.');
+        return;
+      }
+      wsLabel.textContent = 'Reconnecting...';
+      reconnectTimer = setTimeout(connectWS, 2000);
+    };
+
+    ws.onerror = () => {
+      wsDot.className = 'status-dot off';
+    };
+  }
+
+  function sendCmd(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(obj));
+    }
+  }
+
+  function applyZoom() {
+    if (zoomLevel > 1) {
+      stage.classList.add('zoomed');
+      canvas.style.width = Math.round(remoteW * (zoomLevel === 1.75 ? 0.9 : 1)) + 'px';
+      canvas.style.height = 'auto';
+      btnZoom.textContent = 'Zoom ' + zoomLevel + 'x';
+      btnZoom.classList.add('active');
+    } else {
+      stage.classList.remove('zoomed');
+      canvas.style.width = '';
+      canvas.style.height = '';
+      btnZoom.textContent = 'Zoom 1x';
+      btnZoom.classList.remove('active');
+    }
+    stage.classList.toggle('panning', zoomLevel > 1 && panMode);
+  }
+
+  function canvasCoords(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(remoteW, Math.round(((clientX - rect.left) / rect.width) * remoteW)));
+    const y = Math.max(0, Math.min(remoteH, Math.round(((clientY - rect.top) / rect.height) * remoteH)));
+    return { x, y };
+  }
+
+  // Pointer/Touch mapping: tap = click, drag = wheel scroll (atau pan jika panMode)
+  let pDown = null;
+  let longPressTimer = null;
+  let longPressed = false;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (panMode && zoomLevel > 1) return;
+    pDown = { x: e.clientX, y: e.clientY, lastY: e.clientY, lastX: e.clientX, moved: false, button: e.button };
+    longPressed = false;
+    clearTimeout(longPressTimer);
+    if (e.pointerType === 'touch') {
+      longPressTimer = setTimeout(() => {
+        if (pDown && !pDown.moved) {
+          longPressed = true;
+          const pt = canvasCoords(pDown.x, pDown.y);
+          sendCmd({ type: 'click', x: pt.x, y: pt.y, button: 'right' });
+          showToast('Klik kanan');
+        }
+      }, 550);
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!pDown) return;
+    const dx = e.clientX - pDown.x;
+    const dy = e.clientY - pDown.y;
+    if (Math.hypot(dx, dy) > 8) {
+      pDown.moved = true;
+      clearTimeout(longPressTimer);
+      const stepY = pDown.lastY - e.clientY;
+      const stepX = pDown.lastX - e.clientX;
+      pDown.lastY = e.clientY;
+      pDown.lastX = e.clientX;
+      const pt = canvasCoords(e.clientX, e.clientY);
+      sendCmd({ type: 'wheel', x: pt.x, y: pt.y, deltaX: stepX * 2, deltaY: stepY * 2 });
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    clearTimeout(longPressTimer);
+    if (!pDown) return;
+    const wasMoved = pDown.moved;
+    const btn = pDown.button === 2 ? 'right' : 'left';
+    pDown = null;
+    if (!wasMoved && !longPressed) {
+      const pt = canvasCoords(e.clientX, e.clientY);
+      sendCmd({ type: 'click', x: pt.x, y: pt.y, button: btn });
+    }
+  });
+
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const pt = canvasCoords(e.clientX, e.clientY);
+    sendCmd({ type: 'click', x: pt.x, y: pt.y, button: 'right' });
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const pt = canvasCoords(e.clientX, e.clientY);
+    sendCmd({ type: 'wheel', x: pt.x, y: pt.y, deltaX: e.deltaX, deltaY: e.deltaY });
+  }, { passive: false });
+
+  // Keyboard desktop langsung jika tidak sedang fokus di input teks
+  window.addEventListener('keydown', (e) => {
+    if (appScreen.style.display !== 'flex') return;
+    if (document.activeElement === $('text-input')) return;
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      sendCmd({ type: 'type', text: e.key });
+    } else if (['Backspace', 'Enter', 'Escape', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      sendCmd({ type: 'key', key: e.key });
+    }
+  });
+
+  $('type-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const inp = $('text-input');
+    const txt = inp.value;
+    if (txt) {
+      sendCmd({ type: 'type', text: txt, enter: true });
+      inp.value = '';
+    } else {
+      sendCmd({ type: 'key', key: 'Enter' });
+    }
+  });
+
+  $('btn-bksp').addEventListener('click', () => sendCmd({ type: 'key', key: 'Backspace' }));
+  $('btn-enter').addEventListener('click', () => sendCmd({ type: 'key', key: 'Enter' }));
+  $('btn-esc').addEventListener('click', () => sendCmd({ type: 'key', key: 'Escape' }));
+  $('btn-reload').addEventListener('click', () => { sendCmd({ type: 'reload' }); showToast('Reload WhatsApp Web...'); });
+  $('btn-logout').addEventListener('click', () => leaveApp('Sudah keluar.'));
+
+  btnZoom.addEventListener('click', () => {
+    zoomLevel = zoomLevel === 1 ? 1.75 : 1;
+    if (zoomLevel === 1) panMode = false;
+    btnMode.textContent = panMode ? 'Geser Layar' : 'Tap: Klik';
+    btnMode.classList.toggle('active', panMode);
+    applyZoom();
+  });
+
+  btnMode.addEventListener('click', () => {
+    if (zoomLevel === 1) {
+      zoomLevel = 1.75;
+      panMode = true;
+    } else {
+      panMode = !panMode;
+    }
+    btnMode.textContent = panMode ? 'Geser Layar' : 'Tap: Klik';
+    btnMode.classList.toggle('active', panMode);
+    applyZoom();
+  });
+
+  loginBtn.addEventListener('click', () => doLogin(passInput.value));
+  passInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(passInput.value); });
+
+  (async () => {
+    await resolveInitialEndpoint();
+    const savedTok = localStorage.getItem('wa_remote_token');
+    const savedEp = localStorage.getItem('wa_remote_ep');
+    if (savedTok && (endpoint || savedEp)) {
+      endpoint = endpoint || savedEp;
+      token = savedTok;
+      // Cek token masih valid
+      try {
+        const r = await fetch(endpoint + '/api/me', { headers: { Authorization: 'Bearer ' + token } });
+        if (r.ok) {
+          enterApp();
+          return;
+        }
+      } catch {}
+      localStorage.removeItem('wa_remote_token');
+      token = '';
+    }
+  })();
+})();
+</script>
+</body>
+</html>
