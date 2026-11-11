@@ -234,18 +234,20 @@
 
     // Hosted di GitHub Pages -> ambil tunnel.json terbaru
     endpointMeta.textContent = 'Memuat endpoint aktif dari tunnel.json...';
-    try {
-      const r = await fetch('./tunnel.json?t=' + Date.now(), { cache: 'no-store' });
-      if (r.ok) {
-        const d = await r.json();
-        if (d.url) {
-          endpoint = normalizeEndpoint(d.url);
-          endpointInput.value = endpoint;
-          endpointMeta.textContent = 'Endpoint aktif: ' + endpoint + (d.updatedAt ? ' (' + new Date(d.updatedAt).toLocaleTimeString() + ')' : '');
-          return;
+    for (const tj of ['./tunnel.json', '/animestudio/apps/wa-web/tunnel.json']) {
+      try {
+        const r = await fetch(tj + '?t=' + Date.now(), { cache: 'no-store' });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.url) {
+            endpoint = normalizeEndpoint(d.url);
+            endpointInput.value = endpoint;
+            endpointMeta.textContent = 'Endpoint aktif: ' + endpoint + (d.updatedAt ? ' (' + new Date(d.updatedAt).toLocaleTimeString() + ')' : '');
+            return;
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
 
     const saved = localStorage.getItem('wa_remote_ep') || '';
     endpointInput.value = saved;
